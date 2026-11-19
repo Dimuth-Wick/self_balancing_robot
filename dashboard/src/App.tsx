@@ -15,8 +15,10 @@ function Gain({ label, value, min, max, step, onChange }: {
 }) {
   const tips: Record<string, string> = {
     Kp: 'Controls response to tilt. Too high: fast oscillation. Too low: cannot catch the fall.',
-    Ki: 'Corrects slow drift. Too high: late wobble. Too low: stays off-centre.',
+    Ki: 'Removes a steady lean from uneven load. Too high: slow wobble that grows. It will NOT stop a run-away — fix the setpoint for that.',
     Kd: 'Damps motion like friction. Too high: noisy or sluggish. Too low: wobble grows.',
+    Setpoint: 'The angle the robot tries to hold. If it is off from the true balance angle, the robot runs away in one direction and falls.',
+    'Mounting offset': 'Simulator only: pretend the sensor is mounted crooked by this many degrees. Try 0.5° and watch it run away, then press Zero angle.',
   };
   return <div className="gain">
     <div className="gain-label"><label>{label} <span title={tips[label] || 'Control parameter'}>ⓘ</span></label>
@@ -122,6 +124,7 @@ function App() {
   const [tab, setTab] = useState<'event'|'console'|'coach'>('coach');
   const [toast, setToast] = useState('');
   const [manualCommand, setManualCommand] = useState('');
+  const [mountOffset, setMountOffset] = useState(0);
 
   const notify = (text: string) => { setToast(text); window.setTimeout(() => setToast(''), 2500); };
   const processChunk = (chunk: string) => {
@@ -139,6 +142,10 @@ function App() {
   const startSimulator = () => {
     sim.current.close();
     sim.current.onLine(processChunk);
+    const store = useDashboard.getState();
+    store.selectGainSet('sim');
+    const g = useDashboard.getState().requested;
+    for (const cmd of [`KP=${g.kp}`, `KI=${g.ki}`, `KD=${g.kd}`, `SP=${g.sp}`]) sim.current.send(cmd);
     sim.current.start();
     useDashboard.setState({ simulator: true, connected: true });
     useDashboard.getState().addEvent('Built-in simulator started');
@@ -153,6 +160,9 @@ function App() {
           source.current = { kind: 'serial', ref: serial.current };
           sim.current.close();
           useDashboard.setState({ simulator: false, connected: true });
+          useDashboard.getState().selectGainSet('robot');
+          useDashboard.setState({ awaitingRobotGains: true });
+          serial.current.send('GET');
           useDashboard.getState().addEvent(`Reconnected at ${baud} baud`);
         }
       } catch { /* optional */ }
@@ -193,7 +203,7 @@ function App() {
     useDashboard.getState().setRequested({ [key]: value });
   };
   useEffect(() => {
-    if (manual) return;
+    if (manual || state.requestedOrigin !== 'user') return;
     const id = window.setTimeout(() => {
       const r = useDashboard.getState().requested;
       sendCommand(`KP=${r.kp}`);
@@ -203,7 +213,7 @@ function App() {
     }, 150);
     return () => clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.requested, manual]);
+  }, [state.requested, state.requestedOrigin, manual]);
 
   const connectSerial = async () => {
     try {
@@ -213,6 +223,9 @@ function App() {
       source.current = { kind: 'serial', ref: serial.current };
       sim.current.close();
       useDashboard.setState({ simulator: false, connected: true });
+      useDashboard.getState().selectGainSet('robot');
+      useDashboard.setState({ awaitingRobotGains: true });
+      sendCommand('GET');
       useDashboard.getState().addEvent(`Connected at ${baud} baud`);
       notify('Serial connected');
     } catch (e) { notify(e instanceof Error ? e.message : 'Connection failed'); }
@@ -227,7 +240,8 @@ function App() {
     await navigator.clipboard.writeText(useDashboard.getState().consoleLines.join('\n'));
     notify('Console copied');
   };
-  const coach = coachHint(state.ring.values().slice(-125).map((r) => r.angle), state.fallCount, state.requested.kd, state.requested.ki, state.requested.kp);
+  const recentRows = state.ring.values().slice(-125);
+  const coach = coachHint(recentRows.map((r) => r.angle), state.fallCount, state.requested.kd, state.requested.ki, state.requested.kp, recentRows.map((r) => r.x));
   const osc = analyze(state.ring.values().slice(-125).map((r) => r.angle), 0.04);
   const stale = state.lastPacketAt ? Date.now() - state.lastPacketAt > 1500 : false;
   const latest = state.telemetry;
@@ -327,8 +341,13 @@ function App() {
             <button onClick={() => sendCommand('RUN=1')}>▶ Start</button>
             <button onClick={() => sendCommand('RUN=0')} className="stop">■ STOP</button>
             <button onClick={() => sendCommand('ZERO')}>Zero angle</button>
-            <button onClick={() => sim.current.disturbance()}>Disturbance</button>
+            {state.simulator && <button onClick={() => sim.current.disturbance()}>Disturbance</button>}
           </div>
+          {state.simulator && <>
+            <Gain label="Mounting offset" value={mountOffset} min={-3} max={3} step={0.1}
+              onChange={(n) => { sim.current.setMountOffset(n); setMountOffset(sim.current.mountOffset); }}/>
+            <button className="link-button" onClick={() => useDashboard.getState().resetSimGains()}>Reset to defaults</button>
+          </>}
           {manual && <button className="send" onClick={() => { const r=state.requested; sendCommand(`KP=${r.kp}`); sendCommand(`KI=${r.ki}`); sendCommand(`KD=${r.kd}`); sendCommand(`SP=${r.sp}`); }}>Send requested values</button>}
         </section>
         <section className="panel stats">
@@ -340,7 +359,7 @@ function App() {
       <Charts/>
       <section className="panel bottom-panel">
         <div className="tabs"><button className={tab==='coach'?'active':''} onClick={()=>setTab('coach')}>Coach</button><button className={tab==='event'?'active':''} onClick={()=>setTab('event')}>Event log</button><button className={tab==='console'?'active':''} onClick={()=>setTab('console')}>Console</button></div>
-        {tab==='coach' && <div className="coach"><ol><li>Set Ki = 0 and Kd = 0.</li><li>Raise Kp until it just oscillates.</li><li>Add Kd to damp the oscillation.</li><li>Add a tiny Ki to remove drift.</li></ol><div className="hint"><b>Live hint:</b> {coach}</div><div>Detected frequency <b>{osc.frequency.toFixed(2)} Hz</b> · amplitude <b>{osc.amplitude.toFixed(1)}°</b></div></div>}
+        {tab==='coach' && <div className="coach"><ol><li>Set Ki = 0 and Kd = 0.</li><li>Raise Kp until it just oscillates.</li><li>Add Kd to damp the oscillation.</li><li>If it runs away in one direction, fix the setpoint or press Zero first; only then add a tiny Ki for a steady lean.</li></ol><div className="hint"><b>Live hint:</b> {coach}</div><div>Detected frequency <b>{osc.frequency.toFixed(2)} Hz</b> · amplitude <b>{osc.amplitude.toFixed(1)}°</b></div></div>}
         {tab==='event' && <div className="log"><button onClick={()=>exportCsv(state.ring)}>Export session</button>{state.events.slice(-100).reverse().map((e,i)=><div key={i}><time>{new Date(e.time).toLocaleTimeString()}</time><b className={e.kind}>{e.kind}</b>{e.text}</div>)}</div>}
         {tab==='console' && <div className="console"><div className="console-actions"><button onClick={copyConsole}>Copy</button></div><pre>{state.consoleLines.join('\n')}</pre><form onSubmit={(e)=>{e.preventDefault();sendCommand(manualCommand);setManualCommand('');}}><input aria-label="Manual command" value={manualCommand} onChange={(e)=>setManualCommand(e.target.value)} placeholder="KP=12.5"/><button>Send</button></form></div>}
       </section>

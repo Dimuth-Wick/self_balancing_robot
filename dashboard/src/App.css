@@ -20,3 +20,4 @@
 .toast{position:fixed;right:20px;bottom:20px;background:#26345a;border:1px solid #7c93ff;color:white;border-radius:8px;padding:10px 14px;z-index:50}
 @media(max-width:1150px){.dashboard-grid{grid-template-columns:300px 1fr}.bottom-panel{grid-column:1 / -1;grid-row:auto}.live-stats{display:none}.connection-bar{flex-wrap:wrap;height:auto}}
 @media(max-width:760px){.connection-bar{position:relative}.dashboard-grid{grid-template-columns:1fr}.bottom-panel{grid-column:auto}.left-column{order:0}.charts{order:1}.robot{height:190px}.brand{width:100%}}
+.tuner .link-button{border:0;background:none;color:var(--muted);text-decoration:underline;font-size:.75rem;padding:2px 14px;cursor:pointer}
