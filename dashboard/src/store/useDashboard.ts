@@ -49,7 +49,7 @@ export const useDashboard = create<Dashboard>((set, get) => ({
     }
     get().ring.push({ t: t.pcTimestamp / 1000, angle: t.angle, gyro: t.gyro, sp: t.sp,
       p: t.pT, i: t.iT, d: t.dT, out: t.out, pwmL: t.pwmL, pwmR: t.pwmR,
-      vbat: t.vbat, state: t.state });
+      vbat: t.vbat, state: t.state, x: t.x ?? 0, xEstimated: t.x === undefined });
     set({ telemetry: t, packets: get().packets + 1, lastPacketAt: Date.now() });
   },
   addRaw: (line) => set((s) => ({ consoleLines: [...s.consoleLines.slice(-499), `[${new Date().toLocaleTimeString()}] ${line}`] })),

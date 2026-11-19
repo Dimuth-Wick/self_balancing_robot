@@ -3,6 +3,8 @@ export type Telemetry = {
   pT: number; iT: number; dT: number; out: number;
   pwmL: number; pwmR: number; kp: number; ki: number; kd: number;
   vbat: number; state: number; pcTimestamp: number;
+  /** Floor position in metres (optional 17th field). */
+  x?: number;
 };
 export type ParsedLine =
   | { kind: 'telemetry'; data: Telemetry }
@@ -13,14 +15,18 @@ export function parseLine(line: string): ParsedLine | null {
   const parts = line.trim().replace(/\r$/, '').split(',');
   if (!parts.length || !parts[0]) return null;
   if (parts[0] === 'D') {
-    if (parts.length < 16) return null;
-    const nums = parts.slice(1).map(Number);
+    if (parts.length !== 16 && parts.length !== 17) return null;
+    const raw = parts.slice(1);
+    if (raw.some((r) => r.trim() === '')) return null;
+    const nums = raw.map(Number);
     if (nums.some((n) => !Number.isFinite(n))) return null;
-    const [ms, angle, gyro, sp, pT, iT, dT, out, pwmL, pwmR, kp, ki, kd, vbat, state] = nums;
-    return { kind: 'telemetry', data: {
+    const [ms, angle, gyro, sp, pT, iT, dT, out, pwmL, pwmR, kp, ki, kd, vbat, state, x] = nums;
+    const data: Telemetry = {
       ms, angle, gyro, sp, pT, iT, dT, out, pwmL, pwmR, kp, ki, kd, vbat, state,
       pcTimestamp: Date.now(),
-    } };
+    };
+    if (x !== undefined) data.x = x;
+    return { kind: 'telemetry', data };
   }
   if (parts[0] === 'I') return { kind: 'info', text: parts.slice(1).join(',') };
   if (parts[0] === 'A') return { kind: 'ack', text: parts.slice(1).join(',') };

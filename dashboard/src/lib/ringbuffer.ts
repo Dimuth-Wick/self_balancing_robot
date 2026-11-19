@@ -26,4 +26,6 @@ export type TelemetryRingRow = {
   t: number; angle: number; gyro: number; sp: number;
   p: number; i: number; d: number; out: number; pwmL: number; pwmR: number;
   vbat: number; state: number;
+  /** Floor position in metres; estimated from PWM when xEstimated. */
+  x: number; xEstimated: boolean;
 };
