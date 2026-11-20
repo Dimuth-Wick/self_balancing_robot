@@ -22,13 +22,20 @@
 .status[data-state='stale'] .status-dot { background: var(--warning); }
 .status-label { font-weight: 550; color: var(--text-strong); }
 .status-meta { color: var(--text-faint); }
-.battery { display: inline-flex; align-items: center; gap: 6px; height: var(--row); padding: 0 10px 0 8px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-card); font-size: 12px; white-space: nowrap; color: var(--icon); font-variant-numeric: tabular-nums; }
-.battery-volts { font-weight: 550; color: var(--text-strong); }
+.battery { display: inline-flex; align-items: center; gap: 7px; height: var(--row); padding: 0 11px 0 9px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-card); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; --batt: var(--success); }
+.battery[data-level='low'] { --batt: var(--warning); }
+.battery[data-level='critical'] { --batt: var(--danger); background: var(--danger-soft); box-shadow: none; }
+.battery-pct { font-weight: 600; color: var(--text-strong); }
+.battery[data-level='low'] .battery-pct { color: var(--warning-text); }
+.battery[data-level='critical'] .battery-pct, .battery[data-level='critical'] .battery-meta { color: var(--danger-text); }
 .battery-meta { color: var(--text-faint); }
-.battery[data-level='low'] { color: var(--warning); }
-.battery[data-level='low'] .battery-meta { color: var(--warning-text); }
-.battery[data-level='critical'] { color: var(--danger); background: var(--danger-soft); box-shadow: none; }
-.battery[data-level='critical'] .battery-volts, .battery[data-level='critical'] .battery-meta { color: var(--danger-text); }
+.batt { display: inline-flex; align-items: center; flex: none; }
+.batt-body { position: relative; display: block; width: 22px; height: 11px; padding: 1.5px; border-radius: 3.5px; box-shadow: inset 0 0 0 1.5px var(--ink-5); }
+.batt-fill { display: block; height: 100%; border-radius: 1.5px; background: var(--batt); transition: width 0.6s ease, background-color 0.3s ease; }
+.batt-nub { display: block; width: 2px; height: 5px; margin-left: 1px; border-radius: 0 1px 1px 0; background: var(--ink-5); }
+.battery[data-level='critical'] .batt-fill { animation: batt-pulse 1.4s ease-in-out infinite; }
+@keyframes batt-pulse { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .battery[data-level='critical'] .batt-fill { animation: none; } }
 .topbar-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .topbar-actions .btn[data-variant='danger'] { margin-left: 8px; }
 
