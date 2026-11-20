@@ -1,5 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { Info } from '@phosphor-icons/react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { DotsThree, Info } from '@phosphor-icons/react';
 
 // Small accessible controls in the dashboard's look (geometry from the
 // stageshow kit: 26px segments on a 2px track, 30×18 switch, 28px buttons).
@@ -56,6 +56,51 @@ export function IconButton({ label, children, className, ...rest }: ButtonHTMLAt
     <button type="button" {...rest} className={`icon-btn${className ? ` ${className}` : ''}`} aria-label={label} title={label}>
       {children}
     </button>
+  );
+}
+
+export type MenuItem = { label: string; icon?: ReactNode; onSelect: () => void };
+
+/** A "⋯" button that opens a small menu of less-used actions. */
+export function MenuButton({ label, items }: { label: string; items: MenuItem[] }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    wrap.current?.querySelector<HTMLButtonElement>('[role=menuitem]')?.focus();
+    const onDown = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setOpen(false); trigger.current?.focus(); return; }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      const list = [...(wrap.current?.querySelectorAll<HTMLButtonElement>('[role=menuitem]') ?? [])];
+      const at = list.indexOf(document.activeElement as HTMLButtonElement);
+      list[(at + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length]?.focus();
+      e.preventDefault();
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+
+  return (
+    <div className="menu-wrap" ref={wrap}>
+      <button ref={trigger} type="button" className="icon-btn" aria-label={label} title={label}
+        aria-haspopup="menu" aria-expanded={open} data-open={open || undefined} onClick={() => setOpen((o) => !o)}>
+        <DotsThree size={18} weight="bold" />
+      </button>
+      {open && (
+        <div className="menu" role="menu" aria-label={label}>
+          {items.map((it) => (
+            <button key={it.label} type="button" role="menuitem" className="menu-item"
+              onClick={() => { setOpen(false); it.onSelect(); }}>
+              {it.icon}{it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowCounterClockwise, CheckCircle, Copy, DownloadSimple, HandPalm, Lightbulb, Moon,
-  Pause, Play, Record, Stop, Sun, UploadSimple, WarningCircle, X, Crosshair,
+  Pause, Play, Stop, Sun, UploadSimple, WarningCircle, X, Crosshair,
 } from '@phosphor-icons/react';
 import './App.css';
 import { LineBuffer, parseLine } from './lib/protocol';
@@ -13,7 +13,7 @@ import { readLS, useDashboard, writeLS } from './store/useDashboard';
 import { RobotPanel } from './components/RobotPanel';
 import { Charts } from './components/Charts';
 import { Battery } from './components/Battery';
-import { Button, IconButton, Segmented, Switch, Tip } from './components/ui';
+import { Button, IconButton, MenuButton, Segmented, Switch, Tip } from './components/ui';
 import { fillMissingX } from './lib/positionEstimator';
 
 const TIPS: Record<string, string> = {
@@ -121,9 +121,8 @@ function App() {
     const key = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
       if (e.code === 'Space') { e.preventDefault(); sendCommand('RUN=0'); }
-      if (e.key.toLowerCase() === 'r') useDashboard.setState({ recording: !useDashboard.getState().recording });
       if (e.key.toLowerCase() === 'p') useDashboard.setState({ paused: !useDashboard.getState().paused });
-      if (e.key === '?') notify('Shortcuts: Space = stop, R = record, P = pause');
+      if (e.key === '?') notify('Shortcuts: Space = stop, P = pause charts');
     };
     window.addEventListener('keydown', key);
     return () => { clearInterval(packetsTimer); window.removeEventListener('keydown', key); };
@@ -252,15 +251,14 @@ function App() {
       </div>
       <Battery />
       <div className="topbar-actions">
-        <Button variant="ghost" className="rec" data-on={state.recording || undefined}
-          onClick={() => useDashboard.setState({ recording: !state.recording })}
-          icon={<Record size={14} weight="fill" />}>{state.recording ? 'Recording' : 'Record'}</Button>
-        <Button variant="ghost" icon={<UploadSimple size={14} weight="fill" />} onClick={() => fileInput.current?.click()}>Import</Button>
+        <MenuButton label="More actions" items={[
+          { label: 'Import recording…', icon: <UploadSimple size={14} weight="fill" />, onSelect: () => fileInput.current?.click() },
+          { label: 'Export as CSV', icon: <DownloadSimple size={14} weight="fill" />, onSelect: () => exportCsv(state.ring) },
+          { label: 'Export as JSON', icon: <DownloadSimple size={14} weight="fill" />,
+            onSelect: () => downloadJson('robot-run.json', { events: state.events, rows: state.ring.values() }) },
+        ]} />
         <input ref={fileInput} type="file" accept=".json" hidden aria-label="Import recording"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) void importReplay(f); e.target.value = ''; }} />
-        <Button variant="ghost" icon={<DownloadSimple size={14} weight="fill" />} onClick={() => exportCsv(state.ring)}>CSV</Button>
-        <Button variant="ghost" icon={<DownloadSimple size={14} weight="fill" />}
-          onClick={() => downloadJson('robot-run.json', { events: state.events, rows: state.ring.values() })}>JSON</Button>
         <IconButton label={state.theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
           onClick={() => { const theme = state.theme === 'dark' ? 'light' : 'dark'; writeLS('dashboard-theme', theme); useDashboard.setState({ theme }); }}>
           {state.theme === 'dark' ? <Sun size={16} weight="fill" /> : <Moon size={16} weight="fill" />}
