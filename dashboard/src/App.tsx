@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowCounterClockwise, CheckCircle, Copy, DownloadSimple, HandPalm, Lightbulb, Moon,
+  ArrowCounterClockwise, CheckCircle, DownloadSimple, HandPalm, Lightbulb, Moon,
   Pause, Play, Stop, Sun, UploadSimple, WarningCircle, X, Crosshair,
 } from '@phosphor-icons/react';
 import './App.css';
@@ -55,9 +55,8 @@ function App() {
   const [manual, setManual] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [baud, setBaud] = useState(Number(readLS('dashboard-baud') || 38400));
-  const [tab, setTab] = useState<'coach'|'event'|'console'>('coach');
+  const [tab, setTab] = useState<'coach'|'event'>('coach');
   const [toast, setToast] = useState('');
-  const [manualCommand, setManualCommand] = useState('');
   const [mountOffset, setMountOffset] = useState(0);
   const [replaySpeed, setReplaySpeed] = useState(1);
   const [, setPresetVersion] = useState(0);
@@ -175,10 +174,6 @@ function App() {
   const chooseSource = (v: 'sim' | 'robot') => {
     if (v === 'robot' && state.simulator) void connectSerial();
     if (v === 'sim' && !state.simulator) void disconnect();
-  };
-  const copyConsole = async () => {
-    try { await navigator.clipboard.writeText(useDashboard.getState().consoleLines.join('\n')); notify('Console copied'); }
-    catch { notify('Could not copy'); }
   };
 
   const recentRows = state.ring.recent(250);
@@ -305,7 +300,7 @@ function App() {
           </div>
           {manual && <Button variant="primary" className="block" onClick={sendGains}>Send gains</Button>}
           <div className="actions">
-            <Button icon={<Play size={14} weight="fill" />} onClick={() => sendCommand('RUN=1')}>Start</Button>
+            <Button variant="primary" icon={<Play size={14} weight="fill" />} onClick={() => sendCommand('RUN=1')}>Start</Button>
             <Button icon={<Crosshair size={14} weight="fill" />} onClick={() => sendCommand('ZERO')}>Zero angle</Button>
             {state.simulator && <Button icon={<HandPalm size={14} weight="fill" />} onClick={() => sim.current.disturbance()}>Push</Button>}
           </div>
@@ -332,9 +327,9 @@ function App() {
       <Charts/>
 
       <div className="col col-right">
-        <section className="panel side" aria-label="Coach, events and console">
+        <section className="panel side" aria-label="Coach and events">
           <div className="tabs" role="tablist" aria-label="Side panel">
-            {([['coach', 'Coach'], ['event', 'Events'], ['console', 'Console']] as const).map(([id, name]) => (
+            {([['coach', 'Coach'], ['event', 'Events']] as const).map(([id, name]) => (
               <button key={id} type="button" role="tab" aria-selected={tab === id} className="tab" onClick={() => setTab(id)}>{name}</button>
             ))}
           </div>
@@ -359,14 +354,6 @@ function App() {
               <span className="tag" data-kind={e.kind}>{e.kind === 'param' ? 'gain' : e.kind}</span>
               <span className="log-text">{e.text}</span>
             </div>)}
-          </div>}
-          {tab === 'console' && <div className="console" role="tabpanel">
-            <pre aria-label="Raw serial lines">{state.consoleLines.slice(-200).join('\n')}</pre>
-            <form className="console-form" onSubmit={(e) => { e.preventDefault(); sendCommand(manualCommand); setManualCommand(''); }}>
-              <input className="input mono" aria-label="Manual command" value={manualCommand} onChange={(e) => setManualCommand(e.target.value)} placeholder="KP=12.5" />
-              <Button type="submit" variant="primary">Send</Button>
-              <IconButton label="Copy console" onClick={copyConsole}><Copy size={16} weight="fill" /></IconButton>
-            </form>
           </div>}
         </section>
         <section className="panel stats" aria-label="Session statistics">

@@ -14,7 +14,7 @@ const TRAIL_SAMPLE_S = 0.04;
 const CAM_OFFSET = new THREE.Vector3(0.12, 0.2, 0.7);
 const LOOK_HEIGHT = 0.08;
 const BODY_COLOR = '#565d6b';
-const ACCENT = '#3b82f6';
+const ACCENT = '#ff6a13';
 const BOARD = '#2563eb';
 const HUB = '#f2c230';
 

@@ -20,7 +20,7 @@ export function RobotSvg() {
           <circle cx="208" cy="190" r="30" fill="#1f2329" stroke="#c9ccd2" strokeWidth="5"/>
           <circle cx="92" cy="190" r="6" fill="#f2c230"/><circle cx="208" cy="190" r="6" fill="#f2c230"/>
         </g>
-        {pwm !== 0 && <path d={pwm > 0 ? 'M 150 218 l 8 -14 l 8 14 z' : 'M 150 218 l -8 -14 l -8 14 z'} fill="#3b82f6"/>}
+        {pwm !== 0 && <path d={pwm > 0 ? 'M 150 218 l 8 -14 l 8 14 z' : 'M 150 218 l -8 -14 l -8 14 z'} fill="#ff6a13"/>}
       </svg>
   );
 }

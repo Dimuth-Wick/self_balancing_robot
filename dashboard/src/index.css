@@ -1,26 +1,27 @@
 /* Tokens follow the stageshow kit's light and dark looks: warm neutral
-   greys, one blue accent, status colours only for status. Text greys are
+   greys, one signal-orange accent, status colours only for status. Text greys are
    stepped up a tone from the kit's illustration values so small text
    passes 4.5:1 on the surfaces it sits on. */
 :root {
   color-scheme: light;
-  --canvas: #f6f5f4;
+  --canvas: #faf6f1;
   --surface: #ffffff;
-  --well: #efeeec;
+  --well: #f3eee8;
   --raised: #ffffff;
   --line: rgba(0, 0, 0, 0.07);
   --line-strong: rgba(0, 0, 0, 0.12);
   --ink-2: rgba(0, 0, 0, 0.06);
   --ink-4: rgba(0, 0, 0, 0.1);
   --ink-5: rgba(0, 0, 0, 0.16);
-  --text-strong: #1f1f22;
-  --text: #4f4f54;
-  --text-faint: #6e6e73;
-  --icon: #6b6b70;
-  --accent: #2f6fe4;
-  --accent-hover: #2961cc;
-  --accent-soft: rgba(47, 111, 228, 0.1);
-  --accent-text: #2058c0;
+  --text-strong: #211c18;
+  --text: #4f4842;
+  --text-faint: #6f6760;
+  --icon: #6d655e;
+  --accent: #ff6a13;
+  --accent-hover: #f25c00;
+  --accent-soft: rgba(255, 106, 19, 0.12);
+  --accent-text: #b84300;
+  --on-accent: #1a1208;
   --success: #1f9d55;
   --success-soft: rgba(31, 157, 85, 0.12);
   --success-text: #157a41;
@@ -31,12 +32,12 @@
   --danger-hover: #c53030;
   --danger-soft: rgba(220, 58, 58, 0.1);
   --danger-text: #b42323;
-  --chart-1: #2f6fe4;
-  --chart-2: #0f9b8e;
-  --chart-3: #d98a06;
-  --chart-muted: #8b8b90;
-  --grid-cell: #d4d3d1;
-  --grid-section: #9db8ef;
+  --chart-1: #ff6a13;
+  --chart-2: #0aa5a0;
+  --chart-3: #2f6bff;
+  --chart-muted: #8b8680;
+  --grid-cell: #e2dbd2;
+  --grid-section: #ffb27f;
   --shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-float: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.12), 0 12px 32px rgba(0, 0, 0, 0.08);
   --thumb-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
@@ -51,10 +52,10 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --canvas: #111113;
-  --surface: #1a1a1d;
-  --well: #0d0d0f;
-  --raised: #26262a;
+  --canvas: #121110;
+  --surface: #1c1a19;
+  --well: #0e0d0c;
+  --raised: #292624;
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
   --ink-2: rgba(255, 255, 255, 0.07);
@@ -64,10 +65,11 @@
   --text: #b4b4b9;
   --text-faint: #8d8d93;
   --icon: #9a9aa0;
-  --accent: #4b8bf5;
-  --accent-hover: #6399f7;
-  --accent-soft: rgba(75, 139, 245, 0.18);
-  --accent-text: #8db4fa;
+  --accent: #ff7a29;
+  --accent-hover: #ff8e47;
+  --accent-soft: rgba(255, 122, 41, 0.18);
+  --accent-text: #ffa165;
+  --on-accent: #1a1208;
   --success: #34c26b;
   --success-soft: rgba(52, 194, 107, 0.16);
   --success-text: #6fd697;
@@ -78,12 +80,12 @@
   --danger-hover: #ec5d61;
   --danger-soft: rgba(229, 72, 77, 0.18);
   --danger-text: #ff8b8e;
-  --chart-1: #5b95f6;
-  --chart-2: #2bbfae;
-  --chart-3: #f0a429;
-  --chart-muted: #8d8d93;
-  --grid-cell: #3a3a3f;
-  --grid-section: #3f5f9c;
+  --chart-1: #ff7a29;
+  --chart-2: #22c7c0;
+  --chart-3: #6a95ff;
+  --chart-muted: #8f8984;
+  --grid-cell: #3a3532;
+  --grid-section: #8a4a22;
   --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06);
   --shadow-float: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 16px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.3);
   --thumb-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.4);
