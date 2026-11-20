@@ -104,6 +104,17 @@ describe('dashboard store', () => {
     expect(s.fallCount).toBe(0);
   });
 
+  it('live telemetry does not override a loaded replay', async () => {
+    const store = await load();
+    const row = { t: 1, angle: 4, gyro: 0, sp: 0, p: 0, i: 0, d: 0, out: 0, pwmL: 0, pwmR: 0, vbat: 0, state: 1, x: 0.3, xEstimated: false };
+    store.setState({ replayRows: [row], replayIndex: 0 });
+    store.getState().showReplayRow(row);
+    store.getState().setValue(tel({ angle: 9, x: 5 }));
+    expect(store.getState().telemetry?.angle).toBe(4);
+    expect(store.getState().pos.x).toBe(0.3);
+    expect(store.getState().ring.length).toBe(1);
+  });
+
   it('loads with defaults when localStorage throws', async () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });

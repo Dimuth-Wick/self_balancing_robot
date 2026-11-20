@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Grid, Html, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -241,7 +241,7 @@ function describe(): string {
   return `Robot tilted ${angle.toFixed(1)} degrees, position ${x >= 0 ? '+' : ''}${x.toFixed(2)} m${s.pos.estimated ? ' (estimated)' : ''}, ${state}`;
 }
 
-export default function Robot3D({ height }: { height: number | string }) {
+function Robot3D({ height }: { height: number | string }) {
   const resetRef = useRef<(() => void) | null>(null);
   const [label, setLabel] = useState(describe);
   useEffect(() => {
@@ -261,3 +261,6 @@ export default function Robot3D({ height }: { height: number | string }) {
     </div>
   );
 }
+
+// Memoised: parents re-render at telemetry rate; the scene reads the store in useFrame instead.
+export default memo(Robot3D);

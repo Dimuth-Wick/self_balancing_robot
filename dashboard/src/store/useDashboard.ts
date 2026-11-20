@@ -117,7 +117,8 @@ export const useDashboard = create<Dashboard>((set, get) => ({
   setValue: (t) => {
     const s = get();
     const prev = s.telemetry;
-    if (prev && prev.state !== 2 && t.state === 2) {
+    const replaying = s.replayRows.length > 0;
+    if (!replaying && prev && prev.state !== 2 && t.state === 2) {
       s.addEvent('Robot fell — motors lost balance', 'fall');
       set((st) => ({ fallCount: st.fallCount + 1 }));
     }
@@ -129,7 +130,9 @@ export const useDashboard = create<Dashboard>((set, get) => ({
     s.ring.push({ t: t.pcTimestamp / 1000, angle: t.angle, gyro: t.gyro, sp: t.sp,
       p: t.pT, i: t.iT, d: t.dT, out: t.out, pwmL: t.pwmL, pwmR: t.pwmR,
       vbat: t.vbat, state: t.state, x: pos.x, xEstimated: pos.estimated });
-    set({ telemetry: t, pos, packets: get().packets + 1, lastPacketAt: Date.now() });
+    // While a recording is loaded, the replay owns the robot view; live data is still recorded.
+    if (replaying) set({ packets: get().packets + 1, lastPacketAt: Date.now() });
+    else set({ telemetry: t, pos, packets: get().packets + 1, lastPacketAt: Date.now() });
   },
   addRaw: (line) => set((s) => ({ consoleLines: [...s.consoleLines.slice(-499), `[${new Date().toLocaleTimeString()}] ${line}`] })),
   addEvent: (text, kind = 'info') => set((s) => ({ events: [...s.events.slice(-499), { time: Date.now(), text, kind }] })),

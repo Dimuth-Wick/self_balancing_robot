@@ -7,7 +7,7 @@ import { Simulator } from './lib/simulator';
 import { WebSerial } from './lib/serial';
 import { analyze, coachHint } from './lib/metrics';
 import { downloadJson, exportCsv } from './lib/export';
-import { useDashboard } from './store/useDashboard';
+import { readLS, useDashboard, writeLS } from './store/useDashboard';
 import { RobotPanel } from './components/RobotPanel';
 import { fillMissingX } from './lib/positionEstimator';
 
@@ -67,7 +67,7 @@ function Chart({ title, series }: { title: string; series: { label: string; colo
 function Charts() {
   const [window, setWindow] = useState(useDashboard.getState().windowSeconds);
   const paused = useDashboard((s) => s.paused);
-  useEffect(() => { useDashboard.setState({ windowSeconds: window }); localStorage.setItem('dashboard-window', String(window)); }, [window]);
+  useEffect(() => { useDashboard.setState({ windowSeconds: window }); writeLS('dashboard-window', String(window)); }, [window]);
   return <div className="charts">
     <div className="chart-toolbar"><div>{[5,10,30,60].map((n) => <button className={window === n ? 'active' : ''} key={n} onClick={() => setWindow(n)}>{n}s</button>)}</div>
       <button onClick={() => useDashboard.setState({ paused: !paused })}>{paused ? '▶ Resume' : 'Ⅱ Pause'}</button></div>
@@ -87,7 +87,7 @@ function App() {
   const state = useDashboard();
   const [manual, setManual] = useState(false);
   const [presetName, setPresetName] = useState('');
-  const [baud, setBaud] = useState(Number(localStorage.getItem('dashboard-baud') || 38400));
+  const [baud, setBaud] = useState(Number(readLS('dashboard-baud') || 38400));
   const [tab, setTab] = useState<'event'|'console'|'coach'>('coach');
   const [toast, setToast] = useState('');
   const [manualCommand, setManualCommand] = useState('');
@@ -107,6 +107,9 @@ function App() {
     else if (parsed.kind === 'error') useDashboard.getState().addEvent(`E: ${parsed.text}`, 'warning');
   };
   const startSimulator = () => {
+    // Never leave the serial link as the command target while the simulator runs.
+    if (source.current.kind === 'serial') void serial.current.close();
+    source.current = { kind: 'sim', ref: sim.current };
     sim.current.close();
     sim.current.onLine(processChunk);
     const store = useDashboard.getState();
@@ -243,9 +246,9 @@ function App() {
   const savePreset = () => {
     if (!presetName.trim()) { notify('Enter a preset name'); return; }
     try {
-      const saved = JSON.parse(localStorage.getItem('dashboard-presets') || '{}') as Record<string, typeof state.requested>;
+      const saved = JSON.parse(readLS('dashboard-presets') || '{}') as Record<string, typeof state.requested>;
       saved[presetName.trim()] = state.requested;
-      localStorage.setItem('dashboard-presets', JSON.stringify(saved));
+      writeLS('dashboard-presets', JSON.stringify(saved));
       notify(`Saved preset ${presetName.trim()}`);
     } catch { notify('Could not save preset'); }
   };
@@ -254,7 +257,7 @@ function App() {
     <header className="connection-bar">
       <div className="brand">⚖ <span>Balance Lab</span></div>
       <div className="status"><i className={stale ? 'amber' : state.connected ? 'green' : 'red'} /> {stale ? 'STALE' : state.connected ? 'CONNECTED' : 'NOT CONNECTED'}</div>
-      <select aria-label="Baud rate" value={baud} onChange={(e) => { const n = Number(e.target.value); setBaud(n); localStorage.setItem('dashboard-baud', String(n)); }}>
+      <select aria-label="Baud rate" value={baud} onChange={(e) => { const n = Number(e.target.value); setBaud(n); writeLS('dashboard-baud', String(n)); }}>
         {[9600,38400,115200].map((n) => <option key={n}>{n}</option>)}
       </select>
       <button onClick={state.simulator ? connectSerial : disconnect}>{state.simulator ? 'Connect' : 'Disconnect'}</button>
@@ -267,7 +270,7 @@ function App() {
       {state.replayRows.length > 0 && <><button onClick={() => useDashboard.setState({ replayPlaying: !state.replayPlaying })}>{state.replayPlaying?'Pause replay':'Play replay'}</button>
         <select aria-label="Replay speed" value={replaySpeed} onChange={(e)=>setReplaySpeed(Number(e.target.value))}><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option><option value={4}>4×</option></select>
         <input aria-label="Replay position" type="range" min={0} max={Math.max(0,state.replayRows.length-1)} value={state.replayIndex} onChange={(e)=>useDashboard.setState({replayIndex:Number(e.target.value), paused:true})}/></>}
-      <button aria-label="Toggle theme" onClick={() => { const theme = state.theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('dashboard-theme', theme); useDashboard.setState({ theme }); }}>{state.theme === 'dark' ? '☀' : '☾'}</button>
+      <button aria-label="Toggle theme" onClick={() => { const theme = state.theme === 'dark' ? 'light' : 'dark'; writeLS('dashboard-theme', theme); useDashboard.setState({ theme }); }}>{state.theme === 'dark' ? '☀' : '☾'}</button>
     </header>
     {typeof (navigator as Navigator & { serial?: unknown }).serial === 'undefined' && <div className="unsupported">Unsupported browser: Web Serial needs Chrome or Edge on desktop.</div>}
     <main className="dashboard-grid">
@@ -284,7 +287,7 @@ function App() {
           </div>
           <div className="presets"><input aria-label="Preset name" value={presetName} onChange={(e)=>setPresetName(e.target.value)} placeholder="Preset name"/>
             <button onClick={savePreset}>Save</button>
-            <select aria-label="Load preset" defaultValue="" onChange={(e)=>{if(!e.target.value)return;try{const p=JSON.parse(localStorage.getItem('dashboard-presets')||'{}') as Record<string,typeof state.requested>;useDashboard.getState().setRequested(p[e.target.value]);notify(`Loaded ${e.target.value}`);}catch{notify('Could not load preset');}}}><option value="">Load preset</option>{(()=>{try{const p=JSON.parse(localStorage.getItem('dashboard-presets')||'{}') as Record<string,unknown>;return Object.keys(p).map(n=><option key={n}>{n}</option>);}catch{return null;}})()}</select></div>
+            <select aria-label="Load preset" defaultValue="" onChange={(e)=>{if(!e.target.value)return;try{const p=JSON.parse(readLS('dashboard-presets')||'{}') as Record<string,typeof state.requested>;useDashboard.getState().setRequested(p[e.target.value]);notify(`Loaded ${e.target.value}`);}catch{notify('Could not load preset');}}}><option value="">Load preset</option>{(()=>{try{const p=JSON.parse(readLS('dashboard-presets')||'{}') as Record<string,unknown>;return Object.keys(p).map(n=><option key={n}>{n}</option>);}catch{return null;}})()}</select></div>
           <div className="tuner-actions">
             <button onClick={() => sendCommand('RUN=1')}>▶ Start</button>
             <button onClick={() => sendCommand('RUN=0')} className="stop">■ STOP</button>
