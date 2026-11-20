@@ -49,9 +49,11 @@ const Chart = memo(function Chart({ def }: { def: ChartDef }) {
     const faint = cssVar('--text-faint');
     const grid = cssVar('--line');
     const axis = { stroke: faint, grid: { stroke: grid, width: 1 }, ticks: { show: false }, font: '11px system-ui, sans-serif', size: 46 };
+    // The plot fills its box: CSS gives it a fixed height in a scrolling page,
+    // or a share of the column when the dashboard fits the window.
+    const size = () => ({ width: Math.max(240, el.clientWidth), height: Math.max(80, el.clientHeight || def.height) });
     const plot = new uPlot({
-      width: Math.max(240, el.clientWidth),
-      height: def.height,
+      ...size(),
       legend: { show: false },
       padding: [6, 4, 0, 0],
       scales: {
@@ -59,16 +61,16 @@ const Chart = memo(function Chart({ def }: { def: ChartDef }) {
         y: { range: (_u, min, max) => fitRange(min, max, def.minSpan) },
       },
       axes: [
-        { ...axis, values: (_u, vals) => vals.map((v) => `${Math.round(v)}s`) },
+        { ...axis, incrs: [1, 2, 5, 10, 15, 30, 60], values: (_u, vals) => vals.map((v) => `${v}s`) },
         // Ticks may sit closer than uPlot's default so short charts still get a scale.
-        { ...axis, space: 18, values: (_u, vals) => vals.map((v) => `${+v.toFixed(2)}${def.unit}`) },
+        { ...axis, space: 26, values: (_u, vals) => vals.map((v) => `${+v.toFixed(2)}${def.unit}`) },
       ],
       series: [{}, ...def.series.map((s) => ({ label: s.label, stroke: cssVar(s.color), width: 1.5, dash: s.dash ? [4, 4] : undefined, points: { show: false } }))],
       cursor: { sync: { key: 'robot-charts' }, points: { size: 6 } },
     }, [[], ...def.series.map(() => [])], el);
     plotRef.current = plot;
 
-    const resize = new ResizeObserver(() => plot.setSize({ width: Math.max(240, el.clientWidth), height: def.height }));
+    const resize = new ResizeObserver(() => plot.setSize(size()));
     resize.observe(el);
 
     const id = window.setInterval(() => {
@@ -110,7 +112,7 @@ const Chart = memo(function Chart({ def }: { def: ChartDef }) {
           </div>
         )}
       </div>
-      <div ref={host} className="chart-plot" />
+      <div ref={host} className="chart-plot" style={{ ['--h' as string]: `${def.height}px` }} />
     </section>
   );
 });

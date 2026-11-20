@@ -51,7 +51,7 @@ export function RobotPanel() {
     <div className="robot-stage">
       {expanded
         ? <div className="robot-placeholder">Showing in the expanded view</div>
-        : <Scene3D height={280} webgl={webgl} />}
+        : <Scene3D height="100%" webgl={webgl} />}
     </div>
     <div className="readout">
       <div className="readout-main">

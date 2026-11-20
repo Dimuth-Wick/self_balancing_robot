@@ -284,6 +284,20 @@ function App() {
     <main className="layout">
       <div className="col col-left">
         <RobotPanel/>
+        <section className="panel stats" aria-label="Session statistics">
+          <div className="panel-head"><div className="panel-title">Last 10 seconds</div></div>
+          <dl className="stats-grid">
+            <div><dt>Max angle</dt><dd>{maxAngle.toFixed(1)}°</dd></div>
+            <div><dt>RMS error</dt><dd>{rms.toFixed(2)}°</dd></div>
+            <div><dt>Motor saturation</dt><dd>{saturation.toFixed(0)}%</dd></div>
+            <div><dt>Falls this session</dt><dd>{state.fallCount}</dd></div>
+          </dl>
+        </section>
+      </div>
+
+      <Charts/>
+
+      <div className="col col-right">
         <section className="panel tuner" aria-label="PID tuner">
           <div className="panel-head">
             <div className="panel-title">PID tuner</div>
@@ -322,11 +336,6 @@ function App() {
               onClick={() => useDashboard.getState().resetSimGains()}>Reset gains to defaults</Button>
           </div>}
         </section>
-      </div>
-
-      <Charts/>
-
-      <div className="col col-right">
         <section className="panel side" aria-label="Coach and events">
           <div className="tabs" role="tablist" aria-label="Side panel">
             {([['coach', 'Coach'], ['event', 'Events']] as const).map(([id, name]) => (
@@ -355,15 +364,6 @@ function App() {
               <span className="log-text">{e.text}</span>
             </div>)}
           </div>}
-        </section>
-        <section className="panel stats" aria-label="Session statistics">
-          <div className="panel-head"><div className="panel-title">Last 10 seconds</div></div>
-          <dl className="stats-grid">
-            <div><dt>Max angle</dt><dd>{maxAngle.toFixed(1)}°</dd></div>
-            <div><dt>RMS error</dt><dd>{rms.toFixed(2)}°</dd></div>
-            <div><dt>Motor saturation</dt><dd>{saturation.toFixed(0)}%</dd></div>
-            <div><dt>Falls this session</dt><dd>{state.fallCount}</dd></div>
-          </dl>
         </section>
       </div>
     </main>

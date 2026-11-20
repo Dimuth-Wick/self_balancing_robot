@@ -47,17 +47,35 @@
 .replay-scrub { flex: 1; max-width: 560px; }
 
 /* ---------- Layout ---------- */
-.layout { display: grid; grid-template-columns: 340px minmax(0, 1fr) 320px; gap: 12px; padding: 12px 16px 24px; max-width: 1760px; margin: 0 auto; align-items: start; }
+.layout { display: grid; grid-template-columns: 340px minmax(0, 1fr) 320px; gap: 12px; padding: 12px 16px 24px; align-items: start; }
 .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+/* Wide screens: the dashboard fits the window and every column ends on the
+   same line. The 3D view, the charts and the coach take up the slack;
+   a column scrolls on its own only if the window is too short. */
+@media (min-width: 1281px) {
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .layout { flex: 1; min-height: 0; width: 100%; grid-template-rows: minmax(0, 1fr); align-items: stretch; padding-bottom: 16px; }
+  .col { min-height: 0; overflow-y: auto; }
+  .col-left .robot { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .col-left .robot-stage { flex: 1; height: auto; min-height: 220px; }
+  .col-left .stats { flex: none; }
+  .charts { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .charts .chart { flex: 1; min-height: 110px; display: flex; flex-direction: column; }
+  .charts .chart:first-of-type { flex: 1.4; }
+  .charts .chart-plot { flex: 1; height: auto; min-height: 0; }
+  .col-right .tuner { flex: none; }
+  .col-right .side { flex: 1; min-height: 240px; display: flex; flex-direction: column; }
+  .col-right .coach, .col-right .log { flex: 1; min-height: 0; overflow-y: auto; max-height: none; }
+}
 @media (max-width: 1280px) {
   .layout { grid-template-columns: 340px minmax(0, 1fr); }
-  .col-right { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .col-right { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 }
 @media (max-width: 860px) {
   .layout { grid-template-columns: minmax(0, 1fr); padding: 12px; }
   .col-right { display: flex; }
   .topbar { flex-wrap: wrap; }
-  .topbar-actions { width: 100%; margin-left: 0; overflow-x: auto; }
+  .topbar-actions { width: 100%; margin-left: 0; }
 }
 
 /* ---------- Panels ---------- */
@@ -133,9 +151,9 @@
 .range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); }
 
 /* ---------- Robot panel ---------- */
-.robot-stage { position: relative; margin: 0 12px; border-radius: var(--radius-md); background: var(--well); overflow: hidden; }
-.robot-svg { display: block; width: 100%; height: 280px; }
-.robot-placeholder { height: 280px; display: grid; place-items: center; color: var(--text-faint); font-size: 12px; }
+.robot-stage { position: relative; height: 280px; margin: 0 12px; border-radius: var(--radius-md); background: var(--well); overflow: hidden; }
+.robot-svg { display: block; width: 100%; height: 100%; }
+.robot-placeholder { height: 100%; display: grid; place-items: center; color: var(--text-faint); font-size: 12px; }
 .robot3d { position: relative; width: 100%; }
 .scene-btn { position: absolute; right: 8px; bottom: 8px; height: 24px; padding: 0 8px; border: 0; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-card); color: var(--text); font-size: 11.5px; font-weight: 500; }
 .scene-btn:hover { color: var(--text-strong); }
@@ -210,7 +228,7 @@
 .legend-swatch { width: 12px; height: 2px; border-radius: 1px; background: var(--swatch); }
 .legend-swatch[data-dash] { background: repeating-linear-gradient(to right, var(--swatch) 0 4px, transparent 4px 6px); }
 .legend-item[aria-pressed='false'] .legend-swatch { opacity: 0.35; }
-.chart-plot { width: 100%; }
+.chart-plot { width: 100%; height: var(--h); }
 .chart-plot .u-over, .chart-plot .u-under { border-radius: 2px; }
 
 /* ---------- Side panel ---------- */
