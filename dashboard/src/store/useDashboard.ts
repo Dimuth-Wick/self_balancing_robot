@@ -33,6 +33,8 @@ type Dashboard = {
   ring: RingBuffer;
   badPackets: number;
   packets: number;
+  /** Packets received in the last full second. */
+  packetRate: number;
   lastPacketAt: number;
   connected: boolean;
   simulator: boolean;
@@ -69,11 +71,11 @@ const initialGains = loadGainSets();
 export const useDashboard = create<Dashboard>((set, get) => ({
   telemetry: null,
   ring: new RingBuffer(),
-  badPackets: 0, packets: 0, lastPacketAt: 0,
+  badPackets: 0, packets: 0, packetRate: 0, lastPacketAt: 0,
   connected: false, simulator: true,
   consoleLines: [], events: [], fallCount: 0,
   recording: false, replayRows: [], replayIndex: 0, replayPlaying: false,
-  theme: (readLS('dashboard-theme') as 'dark' | 'light') || 'dark',
+  theme: (readLS('dashboard-theme') as 'dark' | 'light') || 'light',
   windowSeconds: Number(readLS('dashboard-window') || 10),
   paused: false,
   gainSets: initialGains,

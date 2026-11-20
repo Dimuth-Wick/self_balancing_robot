@@ -1,5 +1,107 @@
-:root { font-family: Inter, system-ui, sans-serif; color: #dfe5f2; background: #0d1119; font-synthesis: none; }
+/* Tokens follow the stageshow kit's light and dark looks: warm neutral
+   greys, one blue accent, status colours only for status. Text greys are
+   stepped up a tone from the kit's illustration values so small text
+   passes 4.5:1 on the surfaces it sits on. */
+:root {
+  color-scheme: light;
+  --canvas: #f6f5f4;
+  --surface: #ffffff;
+  --well: #efeeec;
+  --raised: #ffffff;
+  --line: rgba(0, 0, 0, 0.07);
+  --line-strong: rgba(0, 0, 0, 0.12);
+  --ink-2: rgba(0, 0, 0, 0.06);
+  --ink-4: rgba(0, 0, 0, 0.1);
+  --ink-5: rgba(0, 0, 0, 0.16);
+  --text-strong: #1f1f22;
+  --text: #4f4f54;
+  --text-faint: #6e6e73;
+  --icon: #6b6b70;
+  --accent: #2f6fe4;
+  --accent-hover: #2961cc;
+  --accent-soft: rgba(47, 111, 228, 0.1);
+  --accent-text: #2058c0;
+  --success: #1f9d55;
+  --success-soft: rgba(31, 157, 85, 0.12);
+  --success-text: #157a41;
+  --warning: #d98a06;
+  --warning-soft: rgba(245, 158, 11, 0.16);
+  --warning-text: #925d00;
+  --danger: #dc3a3a;
+  --danger-hover: #c53030;
+  --danger-soft: rgba(220, 58, 58, 0.1);
+  --danger-text: #b42323;
+  --chart-1: #2f6fe4;
+  --chart-2: #0f9b8e;
+  --chart-3: #d98a06;
+  --chart-muted: #8b8b90;
+  --grid-cell: #d4d3d1;
+  --grid-section: #9db8ef;
+  --shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.12), 0 12px 32px rgba(0, 0, 0, 0.08);
+  --thumb-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --row: 26px;
+  --control: 32px;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: #111113;
+  --surface: #1a1a1d;
+  --well: #0d0d0f;
+  --raised: #26262a;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --ink-2: rgba(255, 255, 255, 0.07);
+  --ink-4: rgba(255, 255, 255, 0.13);
+  --ink-5: rgba(255, 255, 255, 0.22);
+  --text-strong: #ececee;
+  --text: #b4b4b9;
+  --text-faint: #8d8d93;
+  --icon: #9a9aa0;
+  --accent: #4b8bf5;
+  --accent-hover: #6399f7;
+  --accent-soft: rgba(75, 139, 245, 0.18);
+  --accent-text: #8db4fa;
+  --success: #34c26b;
+  --success-soft: rgba(52, 194, 107, 0.16);
+  --success-text: #6fd697;
+  --warning: #f0a429;
+  --warning-soft: rgba(240, 164, 41, 0.18);
+  --warning-text: #f5c06b;
+  --danger: #e5484d;
+  --danger-hover: #ec5d61;
+  --danger-soft: rgba(229, 72, 77, 0.18);
+  --danger-text: #ff8b8e;
+  --chart-1: #5b95f6;
+  --chart-2: #2bbfae;
+  --chart-3: #f0a429;
+  --chart-muted: #8d8d93;
+  --grid-cell: #3a3a3f;
+  --grid-section: #3f5f9c;
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-float: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 16px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.3);
+  --thumb-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; min-height: 100vh; }
-button, input, select { font: inherit; }
+html, body { margin: 0; }
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  font-synthesis: none;
+}
+button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

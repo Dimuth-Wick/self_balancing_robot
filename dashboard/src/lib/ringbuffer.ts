@@ -19,6 +19,12 @@ export class RingBuffer {
   values(): TelemetryRingRow[] {
     return Array.from({ length: this.size }, (_, i) => this.data[(this.start + i) % this.capacity]);
   }
+  /** The newest `n` rows, oldest first, without copying the whole buffer. */
+  recent(n: number): TelemetryRingRow[] {
+    const count = Math.max(0, Math.min(n, this.size));
+    const first = this.size - count;
+    return Array.from({ length: count }, (_, i) => this.data[(this.start + first + i) % this.capacity]);
+  }
   clear() { this.start = 0; this.size = 0; }
   get length() { return this.size; }
 }

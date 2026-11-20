@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // uPlot needs a real canvas; the charts are irrelevant here.
-vi.mock('uplot', () => ({ default: class { setData() {} destroy() {} } }));
+vi.mock('uplot', () => ({ default: class { setData() {} setSize() {} setScale() {} setSeries() {} destroy() {} } }));
 
 const serialSent: string[] = [];
 vi.mock('../src/lib/serial', () => ({
@@ -20,6 +20,7 @@ vi.mock('../src/lib/serial', () => ({
 }));
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
 
 let root: Root | undefined;
 let container: HTMLDivElement;
@@ -55,12 +56,11 @@ describe('App', () => {
 
   it('switching back to the simulator never sends simulator gains to the robot', async () => {
     await renderApp();
-    const connect = [...container.querySelectorAll('button')].find((b) => b.textContent === 'Connect')!;
-    await act(async () => { connect.click(); });
+    const radio = (name: string) => [...container.querySelectorAll<HTMLButtonElement>('[role=radio]')].find((b) => b.textContent === name)!;
+    await act(async () => { radio('Robot').click(); });
     expect(serialSent).toEqual(['GET']);
-    const simBox = [...container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')]
-      .find((i) => i.parentElement?.textContent?.includes('Simulator'))!;
-    await act(async () => { simBox.click(); });
+    expect(radio('Robot').getAttribute('aria-checked')).toBe('true');
+    await act(async () => { radio('Simulator').click(); });
     const { useDashboard } = await import('../src/store/useDashboard');
     await act(async () => { useDashboard.getState().setRequested({ kp: 21 }); });
     await act(async () => { vi.advanceTimersByTime(300); });

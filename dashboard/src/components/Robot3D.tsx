@@ -13,8 +13,10 @@ const TRAIL_POINTS = 250;
 const TRAIL_SAMPLE_S = 0.04;
 const CAM_OFFSET = new THREE.Vector3(0.12, 0.2, 0.7);
 const LOOK_HEIGHT = 0.08;
-const BODY_COLOR = '#7c93ff';
-const ACCENT = '#54e0a1';
+const BODY_COLOR = '#565d6b';
+const ACCENT = '#3b82f6';
+const BOARD = '#2563eb';
+const HUB = '#f2c230';
 
 type Controls = { target: THREE.Vector3; update(): void };
 
@@ -42,13 +44,13 @@ function Wheel({ z, wheelRef }: { z: number; wheelRef: (g: THREE.Group | null) =
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[WHEEL_R * 0.92, 0.004, 8, 32]} />
-          <meshStandardMaterial color="#9aa3b8" />
+          <meshStandardMaterial color="#c9ccd2" />
         </mesh>
         {/* Spokes make rotation visible. */}
         {[0, Math.PI / 3, (2 * Math.PI) / 3].map((r) => (
           <mesh key={r} rotation={[0, 0, r]} position={[0, 0, z > 0 ? 0.014 : -0.014]}>
             <boxGeometry args={[WHEEL_R * 1.8, 0.005, 0.002]} />
-            <meshStandardMaterial color={r === 0 ? ACCENT : '#9aa3b8'} />
+            <meshStandardMaterial color={r === 0 ? HUB : '#c9ccd2'} />
           </mesh>
         ))}
       </group>
@@ -66,7 +68,7 @@ function RobotModel({ bodyRef, wheelRefs }: {
       <Wheel z={-TRACK / 2} wheelRef={(g) => { wheelRefs.current[1] = g; }} />
       <mesh position={[0, WHEEL_R, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.004, 0.004, TRACK, 8]} />
-        <meshStandardMaterial color="#9aa3b8" />
+        <meshStandardMaterial color="#c9ccd2" />
       </mesh>
       {/* Body pivots about the axle. */}
       <group ref={bodyRef} position={[0, WHEEL_R, 0]}>
@@ -77,16 +79,16 @@ function RobotModel({ bodyRef, wheelRefs }: {
         {/* Battery pack */}
         <mesh position={[-0.034, 0.05, 0]}>
           <boxGeometry args={[0.012, 0.05, 0.07]} />
-          <meshStandardMaterial color="#2b3245" />
+          <meshStandardMaterial color="#4b5261" />
         </mesh>
         {/* MPU6050 board on the front face so "forward" is visible. */}
         <mesh position={[0.0295, 0.11, 0]}>
           <boxGeometry args={[0.003, 0.022, 0.03]} />
-          <meshStandardMaterial color={ACCENT} emissive={ACCENT} emissiveIntensity={0.25} />
+          <meshStandardMaterial color={BOARD} />
         </mesh>
         <mesh position={[0, 0.17, 0]}>
           <cylinderGeometry args={[0.0025, 0.0025, 0.04, 8]} />
-          <meshStandardMaterial color="#cfd7ff" />
+          <meshStandardMaterial color="#9aa0aa" />
         </mesh>
         <mesh position={[0, 0.193, 0]}>
           <sphereGeometry args={[0.006, 12, 12]} />
@@ -113,8 +115,8 @@ function DistanceLabels({ centerBin }: { centerBin: number }) {
 function Scene({ resetRef }: { resetRef: MutableRefObject<(() => void) | null> }) {
   const theme = useDashboard((s) => s.theme);
   const colors = useMemo(() => ({
-    cell: cssVar('--muted', '#9aa4b7'),
-    section: '#7c93ff',
+    cell: cssVar('--grid-cell', '#c9c9cc'),
+    section: cssVar('--grid-section', '#93b4f5'),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [theme]);
 
@@ -211,7 +213,8 @@ function Scene({ resetRef }: { resetRef: MutableRefObject<(() => void) | null> }
 
   return (
     <>
-      <ambientLight intensity={0.7} />
+      <ambientLight intensity={0.9} />
+      <hemisphereLight args={['#ffffff', '#b9b4ad', 0.6]} />
       <directionalLight position={[1, 2, 1.5]} intensity={1.3} />
       <Grid
         position={[0, 0, 0]} args={[10, 10]} infiniteGrid followCamera
@@ -223,7 +226,7 @@ function Scene({ resetRef }: { resetRef: MutableRefObject<(() => void) | null> }
       <group ref={root}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
           <circleGeometry args={[0.09, 32]} />
-          <meshBasicMaterial color="#000000" transparent opacity={0.22} />
+          <meshBasicMaterial color="#000000" transparent opacity={0.14} />
         </mesh>
         <RobotModel bodyRef={body} wheelRefs={wheels} />
       </group>
@@ -257,7 +260,7 @@ function Robot3D({ height }: { height: number | string }) {
       >
         <Scene resetRef={resetRef} />
       </Canvas>
-      <button className="robot3d-reset" onClick={() => resetRef.current?.()}>Reset view</button>
+      <button type="button" className="scene-btn" onClick={() => resetRef.current?.()}>Reset view</button>
     </div>
   );
 }

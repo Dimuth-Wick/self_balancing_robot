@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import uPlot from 'uplot';
-import 'uplot/dist/uPlot.min.css';
+import {
+  ArrowCounterClockwise, CheckCircle, Copy, DownloadSimple, HandPalm, Lightbulb, Moon,
+  Pause, Play, Record, Stop, Sun, UploadSimple, WarningCircle, X, Crosshair,
+} from '@phosphor-icons/react';
 import './App.css';
 import { LineBuffer, parseLine } from './lib/protocol';
 import { Simulator } from './lib/simulator';
@@ -9,89 +11,55 @@ import { analyze, coachHint } from './lib/metrics';
 import { downloadJson, exportCsv } from './lib/export';
 import { readLS, useDashboard, writeLS } from './store/useDashboard';
 import { RobotPanel } from './components/RobotPanel';
+import { Charts } from './components/Charts';
+import { Button, IconButton, Segmented, Switch, Tip } from './components/ui';
 import { fillMissingX } from './lib/positionEstimator';
 
-function Gain({ label, value, min, max, step, onChange }: {
-  label: string; value: number; min: number; max: number; step: number;
+const TIPS: Record<string, string> = {
+  Kp: 'Controls response to tilt. Too high: fast oscillation. Too low: cannot catch the fall.',
+  Ki: 'Removes a steady lean from uneven load. Too high: slow wobble that grows. It will NOT stop a run-away — fix the setpoint for that.',
+  Kd: 'Damps motion like friction. Too high: noisy or sluggish. Too low: wobble grows.',
+  Setpoint: 'The angle the robot tries to hold. If it is off from the true balance angle, the robot runs away in one direction and falls.',
+  'Mounting offset': 'Simulator only: pretend the sensor is mounted crooked by this many degrees. Try 0.5° and watch it run away, then press Zero angle.',
+};
+
+function Gain({ label, value, min, max, step, unit, onChange }: {
+  label: string; value: number; min: number; max: number; step: number; unit?: string;
   onChange: (n: number) => void;
 }) {
-  const tips: Record<string, string> = {
-    Kp: 'Controls response to tilt. Too high: fast oscillation. Too low: cannot catch the fall.',
-    Ki: 'Removes a steady lean from uneven load. Too high: slow wobble that grows. It will NOT stop a run-away — fix the setpoint for that.',
-    Kd: 'Damps motion like friction. Too high: noisy or sluggish. Too low: wobble grows.',
-    Setpoint: 'The angle the robot tries to hold. If it is off from the true balance angle, the robot runs away in one direction and falls.',
-    'Mounting offset': 'Simulator only: pretend the sensor is mounted crooked by this many degrees. Try 0.5° and watch it run away, then press Zero angle.',
-  };
+  const pct = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
   return <div className="gain">
-    <div className="gain-label"><label>{label} <span title={tips[label] || 'Control parameter'}>ⓘ</span></label>
-      <input aria-label={`${label} numeric`} type="number" value={value} min={min} max={max} step={step}
-        onChange={(e) => onChange(Number(e.target.value))} /></div>
-    <input aria-label={`${label} slider`} type="range" value={value} min={min} max={max} step={step}
-      onChange={(e) => onChange(Number(e.target.value))} />
+    <div className="gain-head">
+      <span className="gain-label">{label}<Tip text={TIPS[label] ?? 'Control parameter'} /></span>
+      <span className="gain-field" data-unit={unit ? true : undefined}>
+        <input aria-label={`${label} numeric`} type="number" value={value} min={min} max={max} step={step}
+          onChange={(e) => onChange(Number(e.target.value))} />
+        {unit && <span className="gain-unit" aria-hidden="true">{unit}</span>}
+      </span>
+    </div>
+    <input className="range" aria-label={`${label} slider`} type="range" value={value} min={min} max={max} step={step}
+      style={{ ['--pct' as string]: `${pct}%` }} onChange={(e) => onChange(Number(e.target.value))} />
   </div>;
 }
 
-function Chart({ title, series }: { title: string; series: { label: string; color: string; values: number[] }[] }) {
-  const el = useRef<HTMLDivElement>(null);
-  const ring = useDashboard((s) => s.ring);
-  const paused = useDashboard((s) => s.paused);
-  const windowSeconds = useDashboard((s) => s.windowSeconds);
-  const replay = useDashboard((s) => s.replayRows);
-  const replayIndex = useDashboard((s) => s.replayIndex);
-  useEffect(() => {
-    if (!el.current) return;
-    const plot = new uPlot({
-      width: Math.max(300, el.current.clientWidth),
-      height: 150,
-      legend: { show: false },
-      scales: { x: { time: false }, y: { range: (_u, min, max) => [Math.min(min, -20), Math.max(max, 20)] } },
-      axes: [{ stroke: '#8790a5', grid: { stroke: '#252b3b' } }, { stroke: '#8790a5', grid: { stroke: '#252b3b' } }],
-      series: [{}, ...series.map((s) => ({ label: s.label, stroke: s.color, width: 1.5 }))],
-      cursor: { sync: { key: 'robot-charts' } },
-    }, [[], ...series.map(() => [])], el.current);
-    const id = window.setInterval(() => {
-      if (paused) return;
-      const rows = replay.length ? replay.slice(0, replayIndex + 1) : ring.values();
-      const recent = rows.filter((r) => !rows.length || r.t >= (rows.at(-1)?.t ?? 0) - windowSeconds);
-      const data: uPlot.AlignedData = [
-        recent.map((r) => r.t),
-        ...series.map((s) => recent.map((r) => s.values[recent.indexOf(r)] ?? (s.label === 'Angle' ? r.angle : s.label === 'Setpoint' ? r.sp : s.label === 'Gyro' ? r.gyro : s.label === 'Battery' ? r.vbat : s.label === 'P' ? r.p : s.label === 'I' ? r.i : s.label === 'D' ? r.d : s.label === 'PWM L' ? r.pwmL : s.label === 'PWM R' ? r.pwmR : r.out))),
-      ];
-      plot.setData(data);
-    }, 50);
-    return () => { clearInterval(id); plot.destroy(); };
-  }, [ring, paused, windowSeconds, replay, replayIndex, series]);
-  return <section className="panel chart-panel"><h3>{title}</h3><div ref={el} className="chart"/></section>;
-}
-
-function Charts() {
-  const [window, setWindow] = useState(useDashboard.getState().windowSeconds);
-  const paused = useDashboard((s) => s.paused);
-  useEffect(() => { useDashboard.setState({ windowSeconds: window }); writeLS('dashboard-window', String(window)); }, [window]);
-  return <div className="charts">
-    <div className="chart-toolbar"><div>{[5,10,30,60].map((n) => <button className={window === n ? 'active' : ''} key={n} onClick={() => setWindow(n)}>{n}s</button>)}</div>
-      <button onClick={() => useDashboard.setState({ paused: !paused })}>{paused ? '▶ Resume' : 'Ⅱ Pause'}</button></div>
-    <Chart title="Angle vs setpoint" series={[{ label: 'Angle', color: '#7c93ff', values: [] }, { label: 'Setpoint', color: '#54e0a1', values: [] }]}/>
-    <Chart title="Gyro rate" series={[{ label: 'Gyro', color: '#e4b85c', values: [] }]}/>
-    <Chart title="PID terms" series={[{ label: 'P', color: '#ff7676', values: [] }, { label: 'I', color: '#54e0a1', values: [] }, { label: 'D', color: '#7c93ff', values: [] }]}/>
-    <Chart title="Motor PWM" series={[{ label: 'PWM L', color: '#e4b85c', values: [] }, { label: 'PWM R', color: '#c084fc', values: [] }]}/>
-    <Chart title="Battery voltage" series={[{ label: 'Battery', color: '#54e0a1', values: [] }]}/>
-  </div>;
-}
+const close = (a: number | undefined, b: number) => a !== undefined && Math.abs(a - b) < 0.005;
 
 function App() {
   const sim = useRef(new Simulator());
   const serial = useRef(new WebSerial());
   const buffer = useRef(new LineBuffer());
   const source = useRef<{ kind: 'sim'|'serial'; ref: Simulator|WebSerial }>({ kind: 'sim', ref: sim.current });
+  const fileInput = useRef<HTMLInputElement>(null);
   const state = useDashboard();
   const [manual, setManual] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [baud, setBaud] = useState(Number(readLS('dashboard-baud') || 38400));
-  const [tab, setTab] = useState<'event'|'console'|'coach'>('coach');
+  const [tab, setTab] = useState<'coach'|'event'|'console'>('coach');
   const [toast, setToast] = useState('');
   const [manualCommand, setManualCommand] = useState('');
   const [mountOffset, setMountOffset] = useState(0);
+  const [replaySpeed, setReplaySpeed] = useState(1);
+  const [, setPresetVersion] = useState(0);
 
   const notify = (text: string) => { setToast(text); window.setTimeout(() => setToast(''), 2500); };
   const processChunk = (chunk: string) => {
@@ -147,14 +115,14 @@ function App() {
   }, [state.theme]);
   useEffect(() => {
     const packetsTimer = window.setInterval(() => {
-      useDashboard.setState({ packets: 0 });
+      useDashboard.setState((s) => ({ packetRate: s.packets, packets: 0 }));
     }, 1000);
     const key = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
       if (e.code === 'Space') { e.preventDefault(); sendCommand('RUN=0'); }
       if (e.key.toLowerCase() === 'r') useDashboard.setState({ recording: !useDashboard.getState().recording });
       if (e.key.toLowerCase() === 'p') useDashboard.setState({ paused: !useDashboard.getState().paused });
-      if (e.key === '?') notify('Shortcuts: Space=STOP, R=record, P=pause, ?=help');
+      if (e.key === '?') notify('Shortcuts: Space = stop, R = record, P = pause');
     };
     window.addEventListener('keydown', key);
     return () => { clearInterval(packetsTimer); window.removeEventListener('keydown', key); };
@@ -169,18 +137,16 @@ function App() {
       useDashboard.getState().addEvent(`Sent ${command}`, 'param');
     } catch (e) { notify(e instanceof Error ? e.message : 'Command failed'); }
   };
+  const sendGains = () => {
+    const r = useDashboard.getState().requested;
+    sendCommand(`KP=${r.kp}`); sendCommand(`KI=${r.ki}`); sendCommand(`KD=${r.kd}`); sendCommand(`SP=${r.sp}`);
+  };
   const applyGain = (key: 'kp'|'ki'|'kd'|'sp', value: number) => {
     useDashboard.getState().setRequested({ [key]: value });
   };
   useEffect(() => {
     if (manual || state.requestedOrigin !== 'user') return;
-    const id = window.setTimeout(() => {
-      const r = useDashboard.getState().requested;
-      sendCommand(`KP=${r.kp}`);
-      sendCommand(`KI=${r.ki}`);
-      sendCommand(`KD=${r.kd}`);
-      sendCommand(`SP=${r.sp}`);
-    }, 150);
+    const id = window.setTimeout(sendGains, 150);
     return () => clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.requested, state.requestedOrigin, manual]);
@@ -197,7 +163,7 @@ function App() {
       useDashboard.setState({ awaitingRobotGains: true });
       sendCommand('GET');
       useDashboard.getState().addEvent(`Connected at ${baud} baud`);
-      notify('Serial connected');
+      notify('Robot connected');
     } catch (e) { notify(e instanceof Error ? e.message : 'Connection failed'); }
   };
   const disconnect = async () => {
@@ -206,25 +172,34 @@ function App() {
     startSimulator();
     useDashboard.getState().addEvent('Disconnected; simulator active');
   };
-  const copyConsole = async () => {
-    await navigator.clipboard.writeText(useDashboard.getState().consoleLines.join('\n'));
-    notify('Console copied');
+  const chooseSource = (v: 'sim' | 'robot') => {
+    if (v === 'robot' && state.simulator) void connectSerial();
+    if (v === 'sim' && !state.simulator) void disconnect();
   };
-  const recentRows = state.ring.values().slice(-125);
-  const coach = coachHint(recentRows.map((r) => r.angle), state.fallCount, state.requested.kd, state.requested.ki, state.requested.kp, recentRows.map((r) => r.x));
-  const osc = analyze(state.ring.values().slice(-125).map((r) => r.angle), 0.04);
-  const stale = state.lastPacketAt ? Date.now() - state.lastPacketAt > 1500 : false;
+  const copyConsole = async () => {
+    try { await navigator.clipboard.writeText(useDashboard.getState().consoleLines.join('\n')); notify('Console copied'); }
+    catch { notify('Could not copy'); }
+  };
+
+  const recentRows = state.ring.recent(250);
+  const last5s = recentRows.slice(-125);
+  const coach = coachHint(last5s.map((r) => r.angle), state.fallCount, state.requested.kd, state.requested.ki, state.requested.kp, last5s.map((r) => r.x));
+  const osc = analyze(last5s.map((r) => r.angle), 0.04);
+  const age = state.lastPacketAt ? Date.now() - state.lastPacketAt : 0;
+  const stale = state.lastPacketAt ? age > 1500 : false;
   const latest = state.telemetry;
-  const rows = state.ring.values();
-  const rms = analyze(rows.slice(-250).map((r) => r.angle), 0.04).rms;
-  const saturation = rows.length ? rows.slice(-250).filter((r) => Math.abs(r.out) >= 255).length / Math.min(rows.length, 250) * 100 : 0;
-  const [replaySpeed, setReplaySpeed] = useState(1);
+  const rms = analyze(recentRows.map((r) => r.angle), 0.04).rms;
+  const maxAngle = recentRows.length ? Math.max(...recentRows.map((r) => Math.abs(r.angle))) : 0;
+  const saturation = recentRows.length ? recentRows.filter((r) => Math.abs(r.out) >= 255).length / recentRows.length * 100 : 0;
+  const confirmed = latest && close(latest.kp, state.requested.kp) && close(latest.ki, state.requested.ki) && close(latest.kd, state.requested.kd);
+  const serialSupported = typeof (navigator as Navigator & { serial?: unknown }).serial !== 'undefined';
+
   const importReplay = async (file: File) => {
     try {
       const json = JSON.parse(await file.text()) as { rows?: Parameters<typeof fillMissingX>[0] };
       if (!json.rows?.length) throw new Error('No telemetry rows found');
       useDashboard.setState({ replayRows: fillMissingX(json.rows), replayIndex: 0, replayPlaying: false, paused: true });
-      notify(`Imported ${json.rows.length} replay samples`);
+      notify(`Imported ${json.rows.length} samples`);
     } catch (e) { notify(e instanceof Error ? e.message : 'Import failed'); }
   };
   useEffect(() => {
@@ -243,77 +218,167 @@ function App() {
     useDashboard.getState().showReplayRow(row);
   }, [state.replayRows, state.replayIndex]);
 
-  const savePreset = () => {
-    if (!presetName.trim()) { notify('Enter a preset name'); return; }
-    try {
-      const saved = JSON.parse(readLS('dashboard-presets') || '{}') as Record<string, typeof state.requested>;
-      saved[presetName.trim()] = state.requested;
-      writeLS('dashboard-presets', JSON.stringify(saved));
-      notify(`Saved preset ${presetName.trim()}`);
-    } catch { notify('Could not save preset'); }
+  const readPresets = (): Record<string, typeof state.requested> => {
+    try { return JSON.parse(readLS('dashboard-presets') || '{}'); } catch { return {}; }
   };
+  const savePreset = () => {
+    const name = presetName.trim();
+    if (!name) { notify('Enter a preset name'); return; }
+    writeLS('dashboard-presets', JSON.stringify({ ...readPresets(), [name]: state.requested }));
+    setPresetName('');
+    setPresetVersion((v) => v + 1);
+    notify(`Saved preset “${name}”`);
+  };
+  const presets = Object.keys(readPresets());
 
   return <div className="app">
-    <header className="connection-bar">
-      <div className="brand">⚖ <span>Balance Lab</span></div>
-      <div className="status"><i className={stale ? 'amber' : state.connected ? 'green' : 'red'} /> {stale ? 'STALE' : state.connected ? 'CONNECTED' : 'NOT CONNECTED'}</div>
-      <select aria-label="Baud rate" value={baud} onChange={(e) => { const n = Number(e.target.value); setBaud(n); writeLS('dashboard-baud', String(n)); }}>
-        {[9600,38400,115200].map((n) => <option key={n}>{n}</option>)}
-      </select>
-      <button onClick={state.simulator ? connectSerial : disconnect}>{state.simulator ? 'Connect' : 'Disconnect'}</button>
-      <label className="switch"><input type="checkbox" checked={state.simulator} onChange={(e) => e.target.checked ? startSimulator() : connectSerial()}/> Simulator</label>
-      <div className="live-stats"><span><b>{state.packets}</b> pkt/s</span><span><b>{state.badPackets}</b> bad</span><span><b>{stale ? '>1500' : state.lastPacketAt ? Date.now() - state.lastPacketAt : 0}</b> ms age</span></div>
-      <button className={state.recording ? 'recording' : ''} onClick={() => useDashboard.setState({ recording: !state.recording })}>● {state.recording ? 'Recording' : 'Record'}</button>
-      <button onClick={() => exportCsv(state.ring)}>Export CSV</button>
-      <button onClick={() => downloadJson('robot-run.json', { events: state.events, rows: state.ring.values() })}>Export JSON</button>
-      <label className="switch"><input type="file" accept=".json" onChange={(e) => { const f=e.target.files?.[0]; if(f) void importReplay(f); }}/> Import JSON</label>
-      {state.replayRows.length > 0 && <><button onClick={() => useDashboard.setState({ replayPlaying: !state.replayPlaying })}>{state.replayPlaying?'Pause replay':'Play replay'}</button>
-        <select aria-label="Replay speed" value={replaySpeed} onChange={(e)=>setReplaySpeed(Number(e.target.value))}><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option><option value={4}>4×</option></select>
-        <input aria-label="Replay position" type="range" min={0} max={Math.max(0,state.replayRows.length-1)} value={state.replayIndex} onChange={(e)=>useDashboard.setState({replayIndex:Number(e.target.value), paused:true})}/></>}
-      <button aria-label="Toggle theme" onClick={() => { const theme = state.theme === 'dark' ? 'light' : 'dark'; writeLS('dashboard-theme', theme); useDashboard.setState({ theme }); }}>{state.theme === 'dark' ? '☀' : '☾'}</button>
+    <header className="topbar">
+      <div className="wordmark">Balance Lab</div>
+      <Segmented label="Data source" value={state.simulator ? 'sim' : 'robot'} onChange={chooseSource}
+        options={[{ value: 'sim', label: 'Simulator' }, { value: 'robot', label: 'Robot' }]} />
+      {!state.simulator && <span className="baud">{baud} baud</span>}
+      {state.simulator && (
+        <select className="select select-quiet" aria-label="Baud rate" value={baud}
+          onChange={(e) => { const n = Number(e.target.value); setBaud(n); writeLS('dashboard-baud', String(n)); }}>
+          {[9600, 38400, 115200].map((n) => <option key={n} value={n}>{n} baud</option>)}
+        </select>
+      )}
+      <div className="status" data-state={stale ? 'stale' : state.connected ? 'live' : 'off'}
+        title={state.lastPacketAt ? `Last packet ${age} ms ago` : 'No packets yet'}>
+        <span className="status-dot" />
+        <span className="status-label">{stale ? 'No data' : state.connected ? 'Live' : 'Offline'}</span>
+        <span className="status-meta">{state.packetRate} Hz{state.badPackets > 0 && ` · ${state.badPackets} bad`}</span>
+      </div>
+      <div className="topbar-actions">
+        <Button variant="ghost" className="rec" data-on={state.recording || undefined}
+          onClick={() => useDashboard.setState({ recording: !state.recording })}
+          icon={<Record size={14} weight="fill" />}>{state.recording ? 'Recording' : 'Record'}</Button>
+        <Button variant="ghost" icon={<UploadSimple size={14} weight="fill" />} onClick={() => fileInput.current?.click()}>Import</Button>
+        <input ref={fileInput} type="file" accept=".json" hidden aria-label="Import recording"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void importReplay(f); e.target.value = ''; }} />
+        <Button variant="ghost" icon={<DownloadSimple size={14} weight="fill" />} onClick={() => exportCsv(state.ring)}>CSV</Button>
+        <Button variant="ghost" icon={<DownloadSimple size={14} weight="fill" />}
+          onClick={() => downloadJson('robot-run.json', { events: state.events, rows: state.ring.values() })}>JSON</Button>
+        <IconButton label={state.theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          onClick={() => { const theme = state.theme === 'dark' ? 'light' : 'dark'; writeLS('dashboard-theme', theme); useDashboard.setState({ theme }); }}>
+          {state.theme === 'dark' ? <Sun size={16} weight="fill" /> : <Moon size={16} weight="fill" />}
+        </IconButton>
+        <Button variant="danger" icon={<Stop size={14} weight="fill" />} onClick={() => sendCommand('RUN=0')}
+          title="Emergency stop (Space)">Stop</Button>
+      </div>
     </header>
-    {typeof (navigator as Navigator & { serial?: unknown }).serial === 'undefined' && <div className="unsupported">Unsupported browser: Web Serial needs Chrome or Edge on desktop.</div>}
-    <main className="dashboard-grid">
-      <aside className="left-column">
+
+    {!state.simulator && !serialSupported && <div className="notice">Web Serial needs Chrome or Edge on a desktop.</div>}
+    {state.replayRows.length > 0 && (
+      <div className="replaybar">
+        <span className="replay-label">Replay</span>
+        <IconButton label={state.replayPlaying ? 'Pause replay' : 'Play replay'}
+          onClick={() => useDashboard.setState({ replayPlaying: !state.replayPlaying })}>
+          {state.replayPlaying ? <Pause size={16} weight="fill" /> : <Play size={16} weight="fill" />}
+        </IconButton>
+        <input className="range replay-scrub" aria-label="Replay position" type="range" min={0} max={Math.max(0, state.replayRows.length - 1)}
+          value={state.replayIndex} style={{ ['--pct' as string]: `${(state.replayIndex / Math.max(1, state.replayRows.length - 1)) * 100}%` }}
+          onChange={(e) => useDashboard.setState({ replayIndex: Number(e.target.value), paused: true })} />
+        <Segmented size="small" label="Replay speed" value={replaySpeed} onChange={setReplaySpeed}
+          options={[0.5, 1, 2, 4].map((n) => ({ value: n, label: `${n}×` }))} />
+        <Button size="small" variant="ghost" icon={<X size={14} weight="bold" />}
+          onClick={() => useDashboard.setState({ replayRows: [], replayIndex: 0, replayPlaying: false, paused: false })}>Close</Button>
+      </div>
+    )}
+
+    <main className="layout">
+      <div className="col col-left">
         <RobotPanel/>
-        <section className="panel tuner">
-          <div className="panel-title"><h2>PID tuner</h2><label className="manual"><input type="checkbox" checked={manual} onChange={(e) => setManual(e.target.checked)}/> Manual Send</label></div>
-          <Gain label="Kp" value={state.requested.kp} min={0} max={40} step={0.1} onChange={(n) => applyGain('kp',n)}/>
-          <Gain label="Ki" value={state.requested.ki} min={0} max={5} step={0.05} onChange={(n) => applyGain('ki',n)}/>
-          <Gain label="Kd" value={state.requested.kd} min={0} max={5} step={0.05} onChange={(n) => applyGain('kd',n)}/>
-          <Gain label="Setpoint" value={state.requested.sp} min={-15} max={15} step={0.1} onChange={(n) => applyGain('sp',n)}/>
-          <div className={`confirmed ${(latest && (latest.kp !== state.requested.kp || latest.ki !== state.requested.ki || latest.kd !== state.requested.kd)) ? 'mismatch' : ''}`}>
-            Robot: Kp {latest?.kp?.toFixed(1) ?? '—'} · Ki {latest?.ki?.toFixed(2) ?? '—'} · Kd {latest?.kd?.toFixed(2) ?? '—'}
+        <section className="panel tuner" aria-label="PID tuner">
+          <div className="panel-head">
+            <div className="panel-title">PID tuner</div>
+            <Switch label="Live apply" on={!manual} onChange={(on) => setManual(!on)} />
           </div>
-          <div className="presets"><input aria-label="Preset name" value={presetName} onChange={(e)=>setPresetName(e.target.value)} placeholder="Preset name"/>
-            <button onClick={savePreset}>Save</button>
-            <select aria-label="Load preset" defaultValue="" onChange={(e)=>{if(!e.target.value)return;try{const p=JSON.parse(readLS('dashboard-presets')||'{}') as Record<string,typeof state.requested>;useDashboard.getState().setRequested(p[e.target.value]);notify(`Loaded ${e.target.value}`);}catch{notify('Could not load preset');}}}><option value="">Load preset</option>{(()=>{try{const p=JSON.parse(readLS('dashboard-presets')||'{}') as Record<string,unknown>;return Object.keys(p).map(n=><option key={n}>{n}</option>);}catch{return null;}})()}</select></div>
-          <div className="tuner-actions">
-            <button onClick={() => sendCommand('RUN=1')}>▶ Start</button>
-            <button onClick={() => sendCommand('RUN=0')} className="stop">■ STOP</button>
-            <button onClick={() => sendCommand('ZERO')}>Zero angle</button>
-            {state.simulator && <button onClick={() => sim.current.disturbance()}>Disturbance</button>}
+          <Gain label="Kp" value={state.requested.kp} min={0} max={40} step={0.1} onChange={(n) => applyGain('kp', n)}/>
+          <Gain label="Ki" value={state.requested.ki} min={0} max={5} step={0.05} onChange={(n) => applyGain('ki', n)}/>
+          <Gain label="Kd" value={state.requested.kd} min={0} max={5} step={0.05} onChange={(n) => applyGain('kd', n)}/>
+          <Gain label="Setpoint" unit="°" value={state.requested.sp} min={-15} max={15} step={0.1} onChange={(n) => applyGain('sp', n)}/>
+          <div className="confirm" data-state={latest ? (confirmed ? 'ok' : 'pending') : 'none'}>
+            {latest && (confirmed ? <CheckCircle size={14} weight="fill" /> : <WarningCircle size={14} weight="fill" />)}
+            <span>{latest ? (confirmed ? 'Robot is running these gains' : 'Robot reports') : 'Waiting for the robot'}</span>
+            {latest && !confirmed && <span className="confirm-values">Kp {latest.kp.toFixed(1)} · Ki {latest.ki.toFixed(2)} · Kd {latest.kd.toFixed(2)}</span>}
           </div>
-          {state.simulator && <>
-            <Gain label="Mounting offset" value={mountOffset} min={-3} max={3} step={0.1}
+          {manual && <Button variant="primary" className="block" onClick={sendGains}>Send gains</Button>}
+          <div className="actions">
+            <Button icon={<Play size={14} weight="fill" />} onClick={() => sendCommand('RUN=1')}>Start</Button>
+            <Button icon={<Crosshair size={14} weight="fill" />} onClick={() => sendCommand('ZERO')}>Zero angle</Button>
+            {state.simulator && <Button icon={<HandPalm size={14} weight="fill" />} onClick={() => sim.current.disturbance()}>Push</Button>}
+          </div>
+          <div className="presets">
+            <input className="input" aria-label="Preset name" value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Name these gains"
+              onKeyDown={(e) => { if (e.key === 'Enter') savePreset(); }} />
+            <Button onClick={savePreset} disabled={!presetName.trim()}>Save</Button>
+            <select className="select" aria-label="Load preset" value="" disabled={!presets.length}
+              onChange={(e) => { const p = readPresets()[e.target.value]; if (p) { useDashboard.getState().setRequested(p); notify(`Loaded “${e.target.value}”`); } }}>
+              <option value="">{presets.length ? 'Load…' : 'No presets'}</option>
+              {presets.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+          {state.simulator && <div className="sim-section">
+            <div className="section-label">Simulator</div>
+            <Gain label="Mounting offset" unit="°" value={mountOffset} min={-3} max={3} step={0.1}
               onChange={(n) => { sim.current.setMountOffset(n); setMountOffset(sim.current.mountOffset); }}/>
-            <button className="link-button" onClick={() => useDashboard.getState().resetSimGains()}>Reset to defaults</button>
-          </>}
-          {manual && <button className="send" onClick={() => { const r=state.requested; sendCommand(`KP=${r.kp}`); sendCommand(`KI=${r.ki}`); sendCommand(`KD=${r.kd}`); sendCommand(`SP=${r.sp}`); }}>Send requested values</button>}
+            <Button size="small" variant="ghost" icon={<ArrowCounterClockwise size={14} weight="bold" />}
+              onClick={() => useDashboard.getState().resetSimGains()}>Reset gains to defaults</Button>
+          </div>}
         </section>
-        <section className="panel stats">
-          <h2>Session statistics</h2>
-          <div className="stats-grid"><span>Max angle<b>{rows.length ? Math.max(...rows.slice(-250).map((r)=>Math.abs(r.angle))).toFixed(1) : '0'}°</b></span>
-            <span>RMS error (10s)<b>{rms.toFixed(2)}°</b></span><span>Saturation<b>{saturation.toFixed(1)}%</b></span><span>Falls<b>{state.fallCount}</b></span></div>
-        </section>
-      </aside>
+      </div>
+
       <Charts/>
-      <section className="panel bottom-panel">
-        <div className="tabs"><button className={tab==='coach'?'active':''} onClick={()=>setTab('coach')}>Coach</button><button className={tab==='event'?'active':''} onClick={()=>setTab('event')}>Event log</button><button className={tab==='console'?'active':''} onClick={()=>setTab('console')}>Console</button></div>
-        {tab==='coach' && <div className="coach"><ol><li>Set Ki = 0 and Kd = 0.</li><li>Raise Kp until it just oscillates.</li><li>Add Kd to damp the oscillation.</li><li>If it runs away in one direction, fix the setpoint or press Zero first; only then add a tiny Ki for a steady lean.</li></ol><div className="hint"><b>Live hint:</b> {coach}</div><div>Detected frequency <b>{osc.frequency.toFixed(2)} Hz</b> · amplitude <b>{osc.amplitude.toFixed(1)}°</b></div></div>}
-        {tab==='event' && <div className="log"><button onClick={()=>exportCsv(state.ring)}>Export session</button>{state.events.slice(-100).reverse().map((e,i)=><div key={i}><time>{new Date(e.time).toLocaleTimeString()}</time><b className={e.kind}>{e.kind}</b>{e.text}</div>)}</div>}
-        {tab==='console' && <div className="console"><div className="console-actions"><button onClick={copyConsole}>Copy</button></div><pre>{state.consoleLines.join('\n')}</pre><form onSubmit={(e)=>{e.preventDefault();sendCommand(manualCommand);setManualCommand('');}}><input aria-label="Manual command" value={manualCommand} onChange={(e)=>setManualCommand(e.target.value)} placeholder="KP=12.5"/><button>Send</button></form></div>}
-      </section>
+
+      <div className="col col-right">
+        <section className="panel side" aria-label="Coach, events and console">
+          <div className="tabs" role="tablist" aria-label="Side panel">
+            {([['coach', 'Coach'], ['event', 'Events'], ['console', 'Console']] as const).map(([id, name]) => (
+              <button key={id} type="button" role="tab" aria-selected={tab === id} className="tab" onClick={() => setTab(id)}>{name}</button>
+            ))}
+          </div>
+          {tab === 'coach' && <div className="coach" role="tabpanel">
+            <div className="hint"><Lightbulb size={16} weight="fill" /><p>{coach}</p></div>
+            <div className="coach-metrics">
+              <div><span>Wobble</span><b>{osc.frequency.toFixed(2)} Hz</b></div>
+              <div><span>Amplitude</span><b>{osc.amplitude.toFixed(1)}°</b></div>
+            </div>
+            <div className="section-label">Tuning recipe</div>
+            <ol className="recipe">
+              <li>Set Ki and Kd to 0.</li>
+              <li>Raise Kp until it just starts to oscillate.</li>
+              <li>Add Kd to damp the oscillation.</li>
+              <li>If it runs away in one direction, fix the setpoint or press Zero angle first. Only then add a tiny Ki for a steady lean.</li>
+            </ol>
+          </div>}
+          {tab === 'event' && <div className="log" role="tabpanel">
+            {state.events.length === 0 && <p className="empty">Nothing yet. Connections, falls and gain changes appear here.</p>}
+            {state.events.slice(-100).reverse().map((e, i) => <div key={i} className="log-row">
+              <time>{new Date(e.time).toLocaleTimeString([], { hour12: false })}</time>
+              <span className="tag" data-kind={e.kind}>{e.kind === 'param' ? 'gain' : e.kind}</span>
+              <span className="log-text">{e.text}</span>
+            </div>)}
+          </div>}
+          {tab === 'console' && <div className="console" role="tabpanel">
+            <pre aria-label="Raw serial lines">{state.consoleLines.slice(-200).join('\n')}</pre>
+            <form className="console-form" onSubmit={(e) => { e.preventDefault(); sendCommand(manualCommand); setManualCommand(''); }}>
+              <input className="input mono" aria-label="Manual command" value={manualCommand} onChange={(e) => setManualCommand(e.target.value)} placeholder="KP=12.5" />
+              <Button type="submit" variant="primary">Send</Button>
+              <IconButton label="Copy console" onClick={copyConsole}><Copy size={16} weight="fill" /></IconButton>
+            </form>
+          </div>}
+        </section>
+        <section className="panel stats" aria-label="Session statistics">
+          <div className="panel-head"><div className="panel-title">Last 10 seconds</div></div>
+          <dl className="stats-grid">
+            <div><dt>Max angle</dt><dd>{maxAngle.toFixed(1)}°</dd></div>
+            <div><dt>RMS error</dt><dd>{rms.toFixed(2)}°</dd></div>
+            <div><dt>Motor saturation</dt><dd>{saturation.toFixed(0)}%</dd></div>
+            <div><dt>Falls this session</dt><dd>{state.fallCount}</dd></div>
+          </dl>
+        </section>
+      </div>
     </main>
     {toast && <div className="toast" role="status">{toast}</div>}
   </div>;
