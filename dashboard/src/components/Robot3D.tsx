@@ -11,7 +11,7 @@ const TRACK = 0.12;
 const SMOOTH_TAU = 0.04;
 const TRAIL_POINTS = 250;
 const TRAIL_SAMPLE_S = 0.04;
-const CAM_OFFSET = new THREE.Vector3(0, 0.22, 0.95);
+const CAM_OFFSET = new THREE.Vector3(0.12, 0.2, 0.7);
 const LOOK_HEIGHT = 0.08;
 const BODY_COLOR = '#7c93ff';
 const ACCENT = '#54e0a1';
@@ -113,15 +113,15 @@ function DistanceLabels({ centerBin }: { centerBin: number }) {
 function Scene({ resetRef }: { resetRef: MutableRefObject<(() => void) | null> }) {
   const theme = useDashboard((s) => s.theme);
   const colors = useMemo(() => ({
-    cell: cssVar('--border', '#293142'),
-    section: cssVar('--muted', '#9aa4b7'),
+    cell: cssVar('--muted', '#9aa4b7'),
+    section: '#7c93ff',
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [theme]);
 
   const root = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group | null>(null);
   const wheels = useRef<(THREE.Group | null)[]>([]);
-  const rendered = useRef({ angle: 0, x: 0, init: false, followX: 0, trailClock: 0 });
+  const rendered = useRef({ angle: 0, x: 0, init: false, followX: 0, trailClock: 0, replayIndex: -1 });
   const [centerBin, setCenterBin] = useState(0);
   const { camera } = useThree();
   const controls = useThree((s) => s.controls) as unknown as Controls | null;
@@ -162,6 +162,18 @@ function Scene({ resetRef }: { resetRef: MutableRefObject<(() => void) | null> }
   useFrame((_, frameDt) => {
     const t = readTargets();
     const r = rendered.current;
+
+    // Replay: a scrub (backwards or a jump) rebuilds the trail from the recorded rows.
+    const { replayRows, replayIndex, displayOrigin } = useDashboard.getState();
+    if (replayRows.length) {
+      const last = r.replayIndex;
+      if (last !== replayIndex && (replayIndex < last || replayIndex > last + 1)) {
+        clearTrail();
+        for (const row of replayRows.slice(Math.max(0, replayIndex - TRAIL_POINTS + 1), replayIndex + 1)) pushTrail(row.x - displayOrigin);
+        r.init = false;
+      }
+      r.replayIndex = replayIndex;
+    }
     const k = 1 - Math.exp(-Math.min(frameDt, 0.1) / SMOOTH_TAU);
     if (!r.init || Math.abs(t.x - r.x) > 0.5 || Math.abs(t.angle - r.angle) > 30) {
       if (r.init && Math.abs(t.x - r.x) > 0.5) clearTrail();
@@ -203,7 +215,7 @@ function Scene({ resetRef }: { resetRef: MutableRefObject<(() => void) | null> }
       <directionalLight position={[1, 2, 1.5]} intensity={1.3} />
       <Grid
         position={[0, 0, 0]} args={[10, 10]} infiniteGrid followCamera
-        cellSize={0.1} sectionSize={0.5} cellThickness={0.6} sectionThickness={1.1}
+        cellSize={0.1} sectionSize={0.5} cellThickness={0.5} sectionThickness={1.2}
         cellColor={colors.cell} sectionColor={colors.section} fadeDistance={6} fadeStrength={1}
       />
       <primitive object={trail.line} />

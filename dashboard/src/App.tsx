@@ -9,6 +9,7 @@ import { analyze, coachHint } from './lib/metrics';
 import { downloadJson, exportCsv } from './lib/export';
 import { useDashboard } from './store/useDashboard';
 import { RobotPanel } from './components/RobotPanel';
+import { fillMissingX } from './lib/positionEstimator';
 
 function Gain({ label, value, min, max, step, onChange }: {
   label: string; value: number; min: number; max: number; step: number;
@@ -217,9 +218,9 @@ function App() {
   const [replaySpeed, setReplaySpeed] = useState(1);
   const importReplay = async (file: File) => {
     try {
-      const json = JSON.parse(await file.text()) as { rows?: typeof rows };
+      const json = JSON.parse(await file.text()) as { rows?: Parameters<typeof fillMissingX>[0] };
       if (!json.rows?.length) throw new Error('No telemetry rows found');
-      useDashboard.setState({ replayRows: json.rows, replayIndex: 0, replayPlaying: false, paused: true });
+      useDashboard.setState({ replayRows: fillMissingX(json.rows), replayIndex: 0, replayPlaying: false, paused: true });
       notify(`Imported ${json.rows.length} replay samples`);
     } catch (e) { notify(e instanceof Error ? e.message : 'Import failed'); }
   };
@@ -236,27 +237,8 @@ function App() {
     if (!state.replayRows.length) return;
     const row = state.replayRows[state.replayIndex];
     if (!row) return;
-    useDashboard.setState({
-      telemetry: {
-        ms: Math.round(row.t * 1000),
-        angle: row.angle,
-        gyro: row.gyro,
-        sp: row.sp,
-        pT: row.p,
-        iT: row.i,
-        dT: row.d,
-        out: row.out,
-        pwmL: row.pwmL,
-        pwmR: row.pwmR,
-        kp: state.requested.kp,
-        ki: state.requested.ki,
-        kd: state.requested.kd,
-        vbat: row.vbat,
-        state: row.state,
-        pcTimestamp: Date.now(),
-      },
-    });
-  }, [state.replayRows, state.replayIndex, state.requested.kp, state.requested.ki, state.requested.kd]);
+    useDashboard.getState().showReplayRow(row);
+  }, [state.replayRows, state.replayIndex]);
 
   const savePreset = () => {
     if (!presetName.trim()) { notify('Enter a preset name'); return; }

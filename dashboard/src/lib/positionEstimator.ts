@@ -1,3 +1,4 @@
+import type { TelemetryRingRow } from './ringbuffer';
 // Estimates the real robot's floor position from motor PWM when telemetry
 // carries no x. Simple first-order speed model of a TT gear motor; the
 // absolute scale is approximate, so the UI labels it "est.".
@@ -28,4 +29,16 @@ export class PositionEstimator {
     this.x = 0;
     this.v = 0;
   }
+}
+
+type RowMaybeX = Omit<TelemetryRingRow, 'x' | 'xEstimated'> & Partial<Pick<TelemetryRingRow, 'x' | 'xEstimated'>>;
+
+/** Gives every recorded row a floor position: keeps recorded x, estimates the rest from PWM. */
+export function fillMissingX(rows: RowMaybeX[]): TelemetryRingRow[] {
+  const est = new PositionEstimator();
+  return rows.map((r) => {
+    const estimated = est.update({ ms: r.t * 1000, pwmL: r.pwmL, pwmR: r.pwmR, state: r.state });
+    if (typeof r.x === 'number' && Number.isFinite(r.x)) return { ...r, x: r.x, xEstimated: r.xEstimated ?? false };
+    return { ...r, x: estimated, xEstimated: true };
+  });
 }
