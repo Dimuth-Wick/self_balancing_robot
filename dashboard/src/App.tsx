@@ -8,6 +8,7 @@ import { WebSerial } from './lib/serial';
 import { analyze, coachHint } from './lib/metrics';
 import { downloadJson, exportCsv } from './lib/export';
 import { useDashboard } from './store/useDashboard';
+import { RobotPanel } from './components/RobotPanel';
 
 function Gain({ label, value, min, max, step, onChange }: {
   label: string; value: number; min: number; max: number; step: number;
@@ -27,41 +28,6 @@ function Gain({ label, value, min, max, step, onChange }: {
     <input aria-label={`${label} slider`} type="range" value={value} min={min} max={max} step={step}
       onChange={(e) => onChange(Number(e.target.value))} />
   </div>;
-}
-
-function RobotView() {
-  const t = useDashboard((s) => s.telemetry);
-  const angle = t?.angle ?? 0;
-  const state = t?.state ?? 0;
-  const zone = Math.abs(angle) < 3 ? 'green' : Math.abs(angle) < 15 ? 'amber' : 'red';
-  const zoneText = zone === 'green' ? 'Stable' : zone === 'amber' ? 'Warning' : 'Danger';
-  const pwm = t?.out ?? 0;
-  const fallCount = useDashboard((s) => s.fallCount);
-  return <section className="panel robot-panel">
-    <div className="panel-title"><h2>Live robot</h2><span className={`badge ${state === 1 ? 'good' : state === 2 ? 'danger' : ''}`}>
-      {state === 2 ? 'FALLEN' : state === 1 ? 'BALANCING' : 'STOPPED'}
-    </span></div>
-    <svg className="robot" viewBox="0 0 300 250" role="img" aria-label={`Robot tilted ${angle.toFixed(1)} degrees, ${zoneText}`}>
-      <g transform={`rotate(${angle} 150 155)`}>
-        <rect x="108" y="74" width="84" height="104" rx="14" fill="#7c93ff" stroke="#cfd7ff" strokeWidth="3"/>
-        <rect x="128" y="92" width="44" height="38" rx="5" fill="#151a2d"/>
-        <circle cx="150" cy="111" r="9" fill="#54e0a1"/>
-        <line x1="150" y1="74" x2="150" y2="42" stroke="#cfd7ff" strokeWidth="5"/>
-      </g>
-      <g>
-        <circle cx="92" cy="190" r="30" fill="#151922" stroke="#9aa3b8" strokeWidth="7"/>
-        <circle cx="208" cy="190" r="30" fill="#151922" stroke="#9aa3b8" strokeWidth="7"/>
-        <circle cx="92" cy="190" r="5" fill="#9aa3b8"/><circle cx="208" cy="190" r="5" fill="#9aa3b8"/>
-      </g>
-      {pwm !== 0 && <path d={pwm > 0 ? 'M 150 218 l 8 -14 l 8 14 z' : 'M 150 218 l -8 -14 l -8 14 z'} fill="#54e0a1"/>}
-    </svg>
-    <div className="gauge"><div className="gauge-band green">0–3°</div><div className="gauge-band amber">3–15°</div><div className="gauge-band red">&gt;15°</div></div>
-    <div className="hero-readouts">
-      <div><span>Angle <b title="Filtered tilt from upright">ⓘ</b></span><strong>{angle.toFixed(2)}°</strong></div>
-      <div><span>Gyro <b title="Angular velocity">ⓘ</b></span><strong>{(t?.gyro ?? 0).toFixed(1)}°/s</strong></div>
-      <div><span>Falls</span><strong>{fallCount}</strong></div>
-    </div>
-  </section>;
 }
 
 function Chart({ title, series }: { title: string; series: { label: string; color: string; values: number[] }[] }) {
@@ -324,7 +290,7 @@ function App() {
     {typeof (navigator as Navigator & { serial?: unknown }).serial === 'undefined' && <div className="unsupported">Unsupported browser: Web Serial needs Chrome or Edge on desktop.</div>}
     <main className="dashboard-grid">
       <aside className="left-column">
-        <RobotView/>
+        <RobotPanel/>
         <section className="panel tuner">
           <div className="panel-title"><h2>PID tuner</h2><label className="manual"><input type="checkbox" checked={manual} onChange={(e) => setManual(e.target.checked)}/> Manual Send</label></div>
           <Gain label="Kp" value={state.requested.kp} min={0} max={40} step={0.1} onChange={(n) => applyGain('kp',n)}/>
