@@ -22,6 +22,13 @@
 .status[data-state='stale'] .status-dot { background: var(--warning); }
 .status-label { font-weight: 550; color: var(--text-strong); }
 .status-meta { color: var(--text-faint); }
+.battery { display: inline-flex; align-items: center; gap: 6px; height: var(--row); padding: 0 10px 0 8px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-card); font-size: 12px; white-space: nowrap; color: var(--icon); font-variant-numeric: tabular-nums; }
+.battery-volts { font-weight: 550; color: var(--text-strong); }
+.battery-meta { color: var(--text-faint); }
+.battery[data-level='low'] { color: var(--warning); }
+.battery[data-level='low'] .battery-meta { color: var(--warning-text); }
+.battery[data-level='critical'] { color: var(--danger); background: var(--danger-soft); box-shadow: none; }
+.battery[data-level='critical'] .battery-volts, .battery[data-level='critical'] .battery-meta { color: var(--danger-text); }
 .topbar-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .topbar-actions .btn[data-variant='danger'] { margin-left: 8px; }
 .rec[data-on] { color: var(--danger-text); }

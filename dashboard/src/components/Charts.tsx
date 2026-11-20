@@ -28,9 +28,6 @@ const CHARTS: ChartDef[] = [
     { label: 'Left', color: '--chart-1', pick: (r) => r.pwmL },
     { label: 'Right', color: '--chart-2', pick: (r) => r.pwmR, dash: true },
   ] },
-  { id: 'vbat', title: 'Battery', unit: 'V', minSpan: 0.5, height: 80, series: [
-    { label: 'Battery', color: '--chart-muted', pick: (r) => r.vbat },
-  ] },
 ];
 
 const MAX_RATE_HZ = 60;

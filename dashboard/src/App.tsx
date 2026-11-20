@@ -12,6 +12,7 @@ import { downloadJson, exportCsv } from './lib/export';
 import { readLS, useDashboard, writeLS } from './store/useDashboard';
 import { RobotPanel } from './components/RobotPanel';
 import { Charts } from './components/Charts';
+import { Battery } from './components/Battery';
 import { Button, IconButton, Segmented, Switch, Tip } from './components/ui';
 import { fillMissingX } from './lib/positionEstimator';
 
@@ -249,6 +250,7 @@ function App() {
         <span className="status-label">{stale ? 'No data' : state.connected ? 'Live' : 'Offline'}</span>
         <span className="status-meta">{state.packetRate} Hz{state.badPackets > 0 && ` · ${state.badPackets} bad`}</span>
       </div>
+      <Battery />
       <div className="topbar-actions">
         <Button variant="ghost" className="rec" data-on={state.recording || undefined}
           onClick={() => useDashboard.setState({ recording: !state.recording })}

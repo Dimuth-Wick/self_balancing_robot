@@ -29,7 +29,7 @@ describe('Charts', () => {
     const root = createRoot(el);
     await act(async () => { root.render(<Charts />); });
     const built = created.length;
-    expect(built).toBe(5);
+    expect(built).toBe(4);
     for (let i = 0; i < 10; i++) {
       await act(async () => {
         useDashboard.getState().setValue({
