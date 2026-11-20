@@ -348,13 +348,6 @@ function App() {
               <div><span>Wobble</span><b>{osc.frequency.toFixed(2)} Hz</b></div>
               <div><span>Amplitude</span><b>{osc.amplitude.toFixed(1)}°</b></div>
             </div>
-            <div className="section-label">Tuning recipe</div>
-            <ol className="recipe">
-              <li>Set Ki and Kd to 0.</li>
-              <li>Raise Kp until it just starts to oscillate.</li>
-              <li>Add Kd to damp the oscillation.</li>
-              <li>If it runs away in one direction, fix the setpoint or press Zero angle first. Only then add a tiny Ki for a steady lean.</li>
-            </ol>
           </div>}
           {tab === 'event' && <div className="log" role="tabpanel">
             {state.events.length === 0 && <p className="empty">Nothing yet. Connections, falls and gain changes appear here.</p>}
